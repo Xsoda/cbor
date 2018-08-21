@@ -1,4 +1,5 @@
 #include "cbor.h"
+#include "cbor_internal.h"
 #include <string.h>
 #include <assert.h>
 #include <math.h>

@@ -1119,6 +1119,14 @@ cbor_value_t *cbor_init_null() {
     return val;
 }
 
+cbor_value_t *cbor_init_map() {
+    return cbor_create(CBOR_TYPE_MAP);
+}
+
+cbor_value_t *cbor_init_array() {
+    return cbor_create(CBOR_TYPE_ARRAY);
+}
+
 cbor_value_t *cbor_init_integer(long long l) {
     cbor_value_t *val = cbor_create(CBOR_TYPE_UINT);
     if (l < 0) {
@@ -1261,6 +1269,7 @@ int cbor_map_set_string(cbor_value_t *map, const char *key, const char *str) {
     len = strlen(key);
     find = cbor_map_find(map, key, len);
     if (find == NULL) {
+        find = cbor_create(CBOR__TYPE_PAIR);
         find->pair.key = cbor_init_string(key, len);
         find->pair.val = cbor_init_string(str, strlen(str));
         cbor_container_insert_tail(map, find);

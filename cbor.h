@@ -95,6 +95,8 @@ bool cbor_is_tag(cbor_value_t *val);
 
 cbor_value_t *cbor_init_boolean(bool b);
 cbor_value_t *cbor_init_null();
+cbor_value_t *cbor_init_map();
+cbor_value_t *cbor_init_array();
 cbor_value_t *cbor_init_integer(long long l);
 cbor_value_t *cbor_init_string(const char *str, int len);
 cbor_value_t *cbor_init_double(double d);

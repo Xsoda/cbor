@@ -1171,15 +1171,35 @@ cbor_value_t *cbor_iter_next(cbor_iter_t *iter) {
     } else {
         iter->next = cbor_container_prev(iter->container, current);
     }
-    if (iter->container->type == CBOR_TYPE_MAP) {
-        iter->key = current->pair.key;
+    if (iter->container->type == CBOR_TYPE_MAP && current) {
         current = current->pair.val;
     }
     return current;
 }
 
 cbor_value_t *cbor_iter_get_key(cbor_iter_t *iter) {
-    return iter->key;
+    cbor_value_t *prev;
+    if (iter->container->type != CBOR_TYPE_MAP) {
+        return NULL;
+    }
+    if (iter->dir == CBOR_ITER_AFTER) {
+        if (iter->next) {
+            prev = cbor_container_prev(iter->container, iter->next);
+        } else {
+            prev = cbor_container_last(iter->container);
+        }
+    } else {
+        if (iter->next) {
+            prev = cbor_container_next(iter->container, iter->next);
+        } else {
+            prev = cbor_container_first(iter->container);
+        }
+    }
+
+    if (prev) {
+        return prev->pair.key;
+    }
+    return NULL;
 }
 
 cbor_value_t *cbor_map_find(cbor_value_t *map, const char *key, size_t len) {

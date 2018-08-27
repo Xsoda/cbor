@@ -33,7 +33,6 @@ typedef struct _cbor_value cbor_value_t;
 typedef struct _cbor_iter {
     const cbor_value_t *container;
     cbor_value_t *next;
-    cbor_value_t *key;
     cbor_iter_dir dir;
 } cbor_iter_t;
 

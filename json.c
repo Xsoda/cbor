@@ -1,5 +1,4 @@
 #include "cbor.h"
-#include "cbor_internal.h"
 #include <ctype.h>
 #include <math.h>
 #include <stdint.h>
@@ -128,7 +127,6 @@ static void lexer_skip_whitespace(lexer_t *lexer) {
     }
 }
 
-
 void json_lexer_error(lexer_t *lexer) {
     char buffer[4096];
     size_t length = 0;
@@ -175,7 +173,7 @@ void json_lexer_error(lexer_t *lexer) {
 cbor_value_t *json_parse_object(lexer_t *lexer) {
     cbor_value_t *object;
 
-    object = cbor_create(CBOR_TYPE_MAP);
+    object = cbor_init_map();
 
     lexer_skip_whitespace(lexer);
 
@@ -262,7 +260,7 @@ cbor_value_t *json_parse_object(lexer_t *lexer) {
 cbor_value_t *json_parse_array(lexer_t *lexer) {
     cbor_value_t *array;
 
-    array = cbor_create(CBOR_TYPE_ARRAY);
+    array = cbor_init_array();
 
     lexer_skip_whitespace(lexer);
 
@@ -351,7 +349,7 @@ void json_string_write_codepoint(cbor_value_t *str, int codepoint) {
 }
 
 cbor_value_t *json_parse_string(lexer_t *lexer) {
-    cbor_value_t *str = cbor_create(CBOR_TYPE_STRING);
+    cbor_value_t *str = cbor_init_string("", 0);
 
     lexer->cursor++;
     lexer->linoff++;
@@ -469,7 +467,7 @@ cbor_value_t *json_parse_string(lexer_t *lexer) {
     }
 
     if (str) {
-        str->blob.ptr[str->blob.length] = 0;
+        cbor_blob_append(str, "", 0);
     }
 
     return str;
@@ -536,17 +534,9 @@ cbor_value_t *json_parse_number(lexer_t *lexer) {
     } else {
         char *end;
         if (frac || exponent) {
-            num = cbor_create(CBOR_TYPE_SIMPLE);
-            num->simple.ctrl = CBOR_SIMPLE_REAL;
-            num->simple.real = strtod(ptr, &end);
+            num = cbor_init_double(strtod(ptr, &end));
         } else {
-            if (sign) {
-                num = cbor_create(CBOR_TYPE_NEGINT);
-                num->uint = strtol(ptr + 1, &end, 10) - 1;
-            } else {
-                num = cbor_create(CBOR_TYPE_UINT);
-                num->uint = strtol(ptr, &end, 10);
-            }
+            num = cbor_init_integer(strtoll(ptr, &end, 10));
         }
         if (end != lexer->cursor) {
             lexer->last_error = JSON_ERR_CONVERT_NUMBER;
@@ -580,9 +570,7 @@ cbor_value_t *json_parse_value(lexer_t *lexer) {
                 lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
                 return NULL;
             } else {
-                cbor_value_t *val = cbor_create(CBOR_TYPE_SIMPLE);
-                val->simple.ctrl = CBOR_SIMPLE_TRUE;
-                return val;
+                return cbor_init_boolean(true);
             }
         } else {
             lexer->last_error = JSON_ERR_CHARACTER_SEQUENCE;
@@ -600,9 +588,7 @@ cbor_value_t *json_parse_value(lexer_t *lexer) {
                 lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
                 return NULL;
             } else {
-                cbor_value_t *val = cbor_create(CBOR_TYPE_SIMPLE);
-                val->simple.ctrl = CBOR_SIMPLE_FALSE;
-                return val;
+                return cbor_init_boolean(false);
             }
         } else {
             lexer->last_error = JSON_ERR_CHARACTER_SEQUENCE;
@@ -619,9 +605,7 @@ cbor_value_t *json_parse_value(lexer_t *lexer) {
                 lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
                 return NULL;
             } else {
-                cbor_value_t *val = cbor_create(CBOR_TYPE_SIMPLE);
-                val->simple.ctrl = CBOR_SIMPLE_NULL;
-                return val;
+                return cbor_init_null();
             }
         } else {
             lexer->last_error = JSON_ERR_CHARACTER_SEQUENCE;
@@ -657,21 +641,16 @@ cbor_value_t *cbor_json_loads(const void *src, int size) {
 void json__dumps(const cbor_value_t *src, int indent, const char *space, int length, cbor_value_t *dst) {
     char buffer[1024];
     cbor_value_t *val;
-    switch (src->type) {
-    case CBOR_TYPE_UINT: {
-        int len = snprintf(buffer, sizeof(buffer), "%lld", src->uint);
+    if (cbor_is_integer(src)) {
+        int len = snprintf(buffer, sizeof(buffer), "%lld", cbor_integer(src));
         cbor_blob_append(dst, buffer, len);
-        break;
-    }
-    case CBOR_TYPE_NEGINT: {
-        int len = snprintf(buffer, sizeof(buffer), "%lld", -src->uint - 1);
-        cbor_blob_append(dst, buffer, len);
-        break;
-    }
-    case CBOR_TYPE_STRING: {
+    } else if (cbor_is_string(src)) {
         cbor_blob_append_byte(dst, '"');
-        for (int i = 0; i < src->blob.length; i++) {
-            switch ((unsigned char)src->blob.ptr[i]) {
+        const char *ptr = cbor_string(src);
+        int length = cbor_string_size(src);
+
+        for (int i = 0; i < length; i++) {
+            switch ((unsigned char)ptr[i]) {
             case '\n':
                 cbor_blob_append_byte(dst, '\\');
                 cbor_blob_append_byte(dst, 'n');
@@ -702,67 +681,67 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
                 break;
             default: {
                 int codepoint = -1;
-                if ((unsigned char)src->blob.ptr[i] <= 0x7F) {
+                if ((unsigned char)ptr[i] <= 0x7F) {
                     /* 0xxxxxxx */
-                    codepoint = (unsigned char)src->blob.ptr[i];
-                } else if ((unsigned char)src->blob.ptr[i] >= 0xC0
-                           && (unsigned char)src->blob.ptr[i] <= 0xDF) {
+                    codepoint = (unsigned char)ptr[i];
+                } else if ((unsigned char)ptr[i] >= 0xC0
+                           && (unsigned char)ptr[i] <= 0xDF) {
                     /* 110xxxxx 10xxxxxx */
-                    codepoint = (unsigned char)src->blob.ptr[i] & 0x1F;
+                    codepoint = (unsigned char)ptr[i] & 0x1F;
                     codepoint <<= 6;
-                    if ((unsigned char)src->blob.ptr[i + 1] >= 0x80
-                        && (unsigned char)src->blob.ptr[i + 1] <= 0xBF) {
-                        codepoint |= (unsigned char)src->blob.ptr[i + 1] & 0x3F;
+                    if ((unsigned char)ptr[i + 1] >= 0x80
+                        && (unsigned char)ptr[i + 1] <= 0xBF) {
+                        codepoint |= (unsigned char)ptr[i + 1] & 0x3F;
                     } else {
                         codepoint = -1;
-                        fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", src->blob.ptr[i + 1], i + 1);
+                        fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", ptr[i + 1], i + 1);
                     }
                     i += 1;
-                } else if ((unsigned char)src->blob.ptr[i] >= 0xE0
-                           && (unsigned char)src->blob.ptr[i] <= 0xEF) {
+                } else if ((unsigned char)ptr[i] >= 0xE0
+                           && (unsigned char)ptr[i] <= 0xEF) {
                     /* 1110xxxx 10xxxxxx 10xxxxxx */
-                    codepoint = (unsigned char)src->blob.ptr[i] & 0xF;
+                    codepoint = (unsigned char)ptr[i] & 0xF;
                     codepoint <<= 12;
-                    if ((unsigned char)src->blob.ptr[i + 1] >= 0x80
-                        && (unsigned char)src->blob.ptr[i + 1] <= 0xBF) {
-                        codepoint |= ((unsigned char)src->blob.ptr[i + 1] & 0x3F) << 6;
-                        if ((unsigned char)src->blob.ptr[i + 2] >= 0x80
-                            && (unsigned char)src->blob.ptr[i + 2] <= 0xBF) {
-                            codepoint |= (unsigned char)src->blob.ptr[i + 2] & 0x3F;
+                    if ((unsigned char)ptr[i + 1] >= 0x80
+                        && (unsigned char)ptr[i + 1] <= 0xBF) {
+                        codepoint |= ((unsigned char)ptr[i + 1] & 0x3F) << 6;
+                        if ((unsigned char)ptr[i + 2] >= 0x80
+                            && (unsigned char)ptr[i + 2] <= 0xBF) {
+                            codepoint |= (unsigned char)ptr[i + 2] & 0x3F;
                         } else {
                             codepoint = -1;
-                            fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", src->blob.ptr[i + 2], i + 2);
+                            fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", ptr[i + 2], i + 2);
                         }
                     } else {
                         codepoint = -1;
-                        fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", src->blob.ptr[i + 1], i + 1);
+                        fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", ptr[i + 1], i + 1);
                     }
                     i += 2;
-                } else if ((unsigned char)src->blob.ptr[i] >= 0xF0
-                           && (unsigned char)src->blob.ptr[i] <= 0xF7) {
+                } else if ((unsigned char)ptr[i] >= 0xF0
+                           && (unsigned char)ptr[i] <= 0xF7) {
                     /* 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
-                    codepoint = (unsigned char)src->blob.ptr[i] & 0x7;
+                    codepoint = (unsigned char)ptr[i] & 0x7;
                     codepoint <<= 18;
-                    if ((unsigned char)src->blob.ptr[i + 1] >= 0x80
-                        && (unsigned char)src->blob.ptr[i + 1] <= 0xBF) {
-                        codepoint |= ((unsigned char)src->blob.ptr[i + 1] & 0x3F) << 12;
-                        if ((unsigned char)src->blob.ptr[i + 2] >= 0x80
-                            && (unsigned char)src->blob.ptr[i + 2] <= 0xBF) {
-                            codepoint |= ((unsigned char)src->blob.ptr[i + 2] & 0x3F) << 6;
-                            if ((unsigned char)src->blob.ptr[i + 3] >= 0x80
-                                && (unsigned char)src->blob.ptr[i + 3] <= 0xBF) {
-                                codepoint |= (unsigned char)src->blob.ptr[i + 3] & 0x3F;
+                    if ((unsigned char)ptr[i + 1] >= 0x80
+                        && (unsigned char)ptr[i + 1] <= 0xBF) {
+                        codepoint |= ((unsigned char)ptr[i + 1] & 0x3F) << 12;
+                        if ((unsigned char)ptr[i + 2] >= 0x80
+                            && (unsigned char)ptr[i + 2] <= 0xBF) {
+                            codepoint |= ((unsigned char)ptr[i + 2] & 0x3F) << 6;
+                            if ((unsigned char)ptr[i + 3] >= 0x80
+                                && (unsigned char)ptr[i + 3] <= 0xBF) {
+                                codepoint |= (unsigned char)ptr[i + 3] & 0x3F;
                             } else {
                                 codepoint = -1;
-                                fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", src->blob.ptr[i + 3], i + 3);
+                                fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", ptr[i + 3], i + 3);
                             }
                         } else {
                             codepoint = -1;
-                            fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", src->blob.ptr[i + 2], i + 2);
+                            fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", ptr[i + 2], i + 2);
                         }
                     } else {
                         codepoint = -1;
-                        fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", src->blob.ptr[i + 1], i + 1);
+                        fprintf(stderr, "dump utf-8 code point fail 0x%02x, offset %d", ptr[i + 1], i + 1);
                     }
                     i += 3;
                 }
@@ -788,9 +767,7 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
             }
         }
         cbor_blob_append_byte(dst, '"');
-        break;
-    }
-    case CBOR_TYPE_ARRAY: {
+    } else if (cbor_is_array(src)) {
         cbor_blob_append_byte(dst, '[');
         if (space) {
             cbor_blob_append_byte(dst, '\n');
@@ -822,9 +799,7 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
             }
         }
         cbor_blob_append_byte(dst, ']');
-        break;
-    }
-    case CBOR_TYPE_MAP: {
+    } else if (cbor_is_map(src)) {
         cbor_blob_append_byte(dst, '{');
         if (space) {
             cbor_blob_append_byte(dst, '\n');
@@ -838,10 +813,10 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
                     cbor_blob_append(dst, space, length);
                 }
             }
-            json__dumps(val->pair.key, indent, space, length, dst);
+            json__dumps(cbor_pair_key(val), indent, space, length, dst);
             cbor_blob_append_byte(dst, ':');
             cbor_blob_append_byte(dst, ' ');
-            json__dumps(val->pair.val, indent, space, length, dst);
+            json__dumps(cbor_pair_value(val), indent, space, length, dst);
             if (cbor_container_next(src, val)) {
                 cbor_blob_append_byte(dst, ',');
                 if (!space) {
@@ -859,37 +834,19 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
             }
         }
         cbor_blob_append_byte(dst, '}');
-        break;
-    }
-    case CBOR_TYPE_SIMPLE: {
-        switch (src->simple.ctrl) {
-        case CBOR_SIMPLE_FALSE: {
-            cbor_blob_append(dst, "false", 5);
-            break;
-        }
-        case CBOR_SIMPLE_TRUE: {
+    } else if (cbor_is_double(src)) {
+        int len = snprintf(buffer, sizeof(buffer), "%g", cbor_real(src));
+        cbor_blob_append(dst, buffer, len);
+    } else if (cbor_is_null(src)) {
+        cbor_blob_append(dst, "null", 4);
+    } else if (cbor_is_boolean(src)) {
+        if (cbor_boolean(src)) {
             cbor_blob_append(dst, "true", 4);
-            break;
+        } else {
+            cbor_blob_append(dst, "false", 5);
         }
-        case CBOR_SIMPLE_NULL: {
-            cbor_blob_append(dst, "null", 4);
-            break;
-        }
-        case CBOR_SIMPLE_REAL: {
-            int len = snprintf(buffer, sizeof(buffer), "%g", src->simple.real);
-            cbor_blob_append(dst, buffer, len);
-            break;
-        }
-        default:
-            fprintf(stderr, "unsupported cbor simple value %d dump to json\n", src->simple.ctrl);
-            break;
-        }
-        break;
-    }
-    default: {
-        fprintf(stderr, "unsupported cbor type %d dump to json\n", src->type);
-        break;
-    }
+    } else {
+        fprintf(stderr, "unsupported cbor type (%s) dump to json\n", cbor_type_str(src));
     }
 }
 
@@ -897,16 +854,15 @@ char *cbor_json_dumps(const cbor_value_t *src, size_t *length, bool pretty) {
     char *ptr = NULL;
     *length = 0;
     if (src) {
-        cbor_value_t *dst = cbor_create(CBOR_TYPE_BYTESTRING);
+        cbor_value_t *dst = cbor_init_string("", 0);
         if (pretty) {
             json__dumps(src, 0, "    ", 4, dst);
         } else {
             json__dumps(src, 0, NULL, 0, dst);
         }
-        dst->blob.ptr[dst->blob.length] = 0;
-        ptr = dst->blob.ptr;
-        *length = dst->blob.length;
-        free(dst);
+        cbor_blob_replace(dst, &ptr, length);
+        ptr[*length] = 0;
+        cbor_destroy(dst);
     }
     return ptr;
 }

@@ -14,20 +14,6 @@ typedef enum {
     CBOR_ITER_BEFORE,
 } cbor_iter_dir;
 
-/* Major Types */
-typedef enum {
-    CBOR_TYPE_UINT = 0,
-    CBOR_TYPE_NEGINT,
-    CBOR_TYPE_BYTESTRING,
-    CBOR_TYPE_STRING,
-    CBOR_TYPE_ARRAY,
-    CBOR_TYPE_MAP,
-    CBOR_TYPE_TAG,
-    CBOR_TYPE_SIMPLE,
-
-    CBOR__TYPE_PAIR,
-} cbor_type;
-
 typedef struct _cbor_value cbor_value_t;
 
 typedef struct _cbor_iter {
@@ -36,7 +22,7 @@ typedef struct _cbor_iter {
     cbor_iter_dir dir;
 } cbor_iter_t;
 
-cbor_value_t *cbor_create(cbor_type type);
+const char *cbor_type_str(const cbor_value_t *val);
 int cbor_destroy(cbor_value_t *val);
 
 int cbor_blob_append(cbor_value_t *val, const char *src, size_t length);
@@ -44,7 +30,7 @@ int cbor_blob_append_byte(cbor_value_t *val, uint8_t byte);
 int cbor_blob_append_word(cbor_value_t *val, uint16_t word);
 int cbor_blob_append_dword(cbor_value_t *val, uint32_t dword);
 int cbor_blob_append_qword(cbor_value_t *val, uint64_t qword);
-
+int cbor_blob_replace(cbor_value_t *val, char **str, size_t *length);
 
 int cbor_container_empty(const cbor_value_t *container);
 int cbor_container_size(const cbor_value_t *container);
@@ -75,22 +61,24 @@ long long cbor_array_get_integer(cbor_value_t *array, int idx);
 double cbor_array_get_double(cbor_value_t *array, int idx);
 bool cbor_array_get_boolean(cbor_value_t *array, int idx);
 
-long long cbor_integer(cbor_value_t *val);
-double cbor_real(cbor_value_t *val);
-int cbor_string_size(cbor_value_t *val);
-const char *cbor_string(cbor_value_t *val);
-bool cbor_boolean(cbor_value_t *val);
+long long cbor_integer(const cbor_value_t *val);
+double cbor_real(const cbor_value_t *val);
+int cbor_string_size(const cbor_value_t *val);
+const char *cbor_string(const cbor_value_t *val);
+bool cbor_boolean(const cbor_value_t *val);
 
-cbor_type cbor_get_type(cbor_value_t *val);
+bool cbor_is_boolean(const cbor_value_t *val);
+bool cbor_is_integer(const cbor_value_t *val);
+bool cbor_is_double(const cbor_value_t *val);
+bool cbor_is_bytestring(const cbor_value_t *val);
+bool cbor_is_string(const cbor_value_t *val);
+bool cbor_is_map(const cbor_value_t *val);
+bool cbor_is_array(const cbor_value_t *val);
+bool cbor_is_tag(const cbor_value_t *val);
+bool cbor_is_null(const cbor_value_t *val);
 
-bool cbor_is_boolean(cbor_value_t *val);
-bool cbor_is_integer(cbor_value_t *val);
-bool cbor_is_double(cbor_value_t *val);
-bool cbor_is_bytestring(cbor_value_t *val);
-bool cbor_is_string(cbor_value_t *val);
-bool cbor_is_map(cbor_value_t *val);
-bool cbor_is_array(cbor_value_t *val);
-bool cbor_is_tag(cbor_value_t *val);
+cbor_value_t *cbor_pair_key(const cbor_value_t *val);
+cbor_value_t *cbor_pair_value(const cbor_value_t *val);
 
 cbor_value_t *cbor_init_boolean(bool b);
 cbor_value_t *cbor_init_null();
@@ -111,7 +99,6 @@ cbor_value_t *cbor_duplicate(cbor_value_t *val);
 
 void cbor_iter_init(cbor_iter_t *iter, const cbor_value_t *container, cbor_iter_dir dir);
 cbor_value_t *cbor_iter_next(cbor_iter_t *iter);
-cbor_value_t *cbor_iter_get_key(cbor_iter_t *iter);
 
 long cbor_tag_get_item(cbor_value_t *val);
 cbor_value_t *cbor_tag_get_content(cbor_value_t *val);

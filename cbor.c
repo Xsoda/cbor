@@ -1,10 +1,60 @@
 #include "cbor.h"
-#include "cbor_internal.h"
+#include "list.h"
 #include <string.h>
 #include <assert.h>
 #include <math.h>
 #include <float.h>
 #include <stdio.h>
+
+/* Major Types */
+typedef enum {
+    CBOR_TYPE_UINT = 0,
+    CBOR_TYPE_NEGINT,
+    CBOR_TYPE_BYTESTRING,
+    CBOR_TYPE_STRING,
+    CBOR_TYPE_ARRAY,
+    CBOR_TYPE_MAP,
+    CBOR_TYPE_TAG,
+    CBOR_TYPE_SIMPLE,
+
+    CBOR__TYPE_PAIR,
+} cbor_type;
+
+typedef enum {
+    CBOR_SIMPLE_NONE = 0,
+    CBOR_SIMPLE_FALSE = 20,
+    CBOR_SIMPLE_TRUE = 21,
+    CBOR_SIMPLE_NULL = 22,
+    CBOR_SIMPLE_UNDEF = 23,
+    CBOR_SIMPLE_EXTENSION = 24,
+    CBOR_SIMPLE_REAL = 25,
+} cbor_simple;
+
+struct _cbor_value {
+    cbor_type type;
+    union {
+        struct {
+            size_t allocated;
+            size_t length;
+            char *ptr;
+        } blob;
+        struct {
+            struct _cbor_value *key;
+            struct _cbor_value *val;
+        } pair;
+        struct {
+            unsigned long long item;
+            struct _cbor_value *content;
+        } tag;
+        struct {
+            double real;
+            cbor_simple ctrl;
+        } simple;
+        unsigned long long uint;
+        list_head(_cbor_cname, _cbor_value) container;
+    };
+    list_entry(_cbor_value) entry;
+};
 
 cbor_value_t *cbor_create(cbor_type type) {
     cbor_value_t *val = (cbor_value_t *)malloc(sizeof(cbor_value_t));
@@ -962,7 +1012,7 @@ char *cbor_dumps(const cbor_value_t *src, size_t *length) {
     return ptr;
 }
 
-long long cbor_integer(cbor_value_t *val) {
+long long cbor_integer(const cbor_value_t *val) {
     if (val == NULL) {
         return 0;
     }
@@ -978,7 +1028,7 @@ long long cbor_integer(cbor_value_t *val) {
     return 0;
 }
 
-double cbor_real(cbor_value_t *val) {
+double cbor_real(const cbor_value_t *val) {
     if (val == NULL) {
         return .0f;
     }
@@ -994,28 +1044,28 @@ double cbor_real(cbor_value_t *val) {
     return .0f;
 }
 
-unsigned long long cbor_raw_uint(cbor_value_t *val) {
+unsigned long long cbor_raw_uint(const cbor_value_t *val) {
     if (val && (val->type == CBOR_TYPE_UINT || val->type == CBOR_TYPE_NEGINT)) {
         return val->uint;
     }
     return 0;
 }
 
-int cbor_string_size(cbor_value_t *val) {
+int cbor_string_size(const cbor_value_t *val) {
     if (cbor_is_string(val)) {
         return val->blob.length;
     }
     return 0;
 }
 
-const char *cbor_string(cbor_value_t *val) {
+const char *cbor_string(const cbor_value_t *val) {
     if (cbor_is_string(val)) {
         return val->blob.ptr;
     }
     return 0;
 }
 
-bool cbor_boolean(cbor_value_t *val) {
+bool cbor_boolean(const cbor_value_t *val) {
     if (val == NULL) {
         return false;
     }
@@ -1054,48 +1104,48 @@ int cbor_tag_set(cbor_value_t *val, long item, cbor_value_t *content) {
     return 0;
 }
 
-bool cbor_is_boolean(cbor_value_t *val) {
+bool cbor_is_boolean(const cbor_value_t *val) {
     if (val && val->type == CBOR_TYPE_SIMPLE) {
         return val->simple.ctrl == CBOR_SIMPLE_TRUE || val->simple.ctrl == CBOR_SIMPLE_FALSE;
     }
     return false;
 }
 
-bool cbor_is_integer(cbor_value_t *val) {
+bool cbor_is_integer(const cbor_value_t *val) {
     return val && (val->type == CBOR_TYPE_UINT || val->type == CBOR_TYPE_NEGINT);
 }
 
-bool cbor_is_double(cbor_value_t *val) {
+bool cbor_is_double(const cbor_value_t *val) {
     if (val && val->type == CBOR_TYPE_SIMPLE) {
         return val->simple.ctrl == CBOR_SIMPLE_REAL;
     }
     return false;
 }
 
-bool cbor_is_null(cbor_value_t *val) {
+bool cbor_is_null(const cbor_value_t *val) {
     if (val && val->type == CBOR_TYPE_SIMPLE) {
         return val->simple.ctrl == CBOR_SIMPLE_NULL;
     }
     return false;
 }
 
-bool cbor_is_bytestring(cbor_value_t *val) {
+bool cbor_is_bytestring(const cbor_value_t *val) {
     return val && val->type == CBOR_TYPE_BYTESTRING;
 }
 
-bool cbor_is_string(cbor_value_t *val) {
+bool cbor_is_string(const cbor_value_t *val) {
     return val && val->type == CBOR_TYPE_STRING;
 }
 
-bool cbor_is_map(cbor_value_t *val) {
+bool cbor_is_map(const cbor_value_t *val) {
     return val && val->type == CBOR_TYPE_MAP;
 }
 
-bool cbor_is_array(cbor_value_t *val) {
+bool cbor_is_array(const cbor_value_t *val) {
     return val && val->type == CBOR_TYPE_ARRAY;
 }
 
-bool cbor_is_tag(cbor_value_t *val) {
+bool cbor_is_tag(const cbor_value_t *val) {
     return val && val->type == CBOR_TYPE_TAG;
 }
 
@@ -1171,35 +1221,7 @@ cbor_value_t *cbor_iter_next(cbor_iter_t *iter) {
     } else {
         iter->next = cbor_container_prev(iter->container, current);
     }
-    if (iter->container->type == CBOR_TYPE_MAP && current) {
-        current = current->pair.val;
-    }
     return current;
-}
-
-cbor_value_t *cbor_iter_get_key(cbor_iter_t *iter) {
-    cbor_value_t *prev;
-    if (iter->container->type != CBOR_TYPE_MAP) {
-        return NULL;
-    }
-    if (iter->dir == CBOR_ITER_AFTER) {
-        if (iter->next) {
-            prev = cbor_container_prev(iter->container, iter->next);
-        } else {
-            prev = cbor_container_last(iter->container);
-        }
-    } else {
-        if (iter->next) {
-            prev = cbor_container_next(iter->container, iter->next);
-        } else {
-            prev = cbor_container_first(iter->container);
-        }
-    }
-
-    if (prev) {
-        return prev->pair.key;
-    }
-    return NULL;
 }
 
 cbor_value_t *cbor_map_find(cbor_value_t *map, const char *key, size_t len) {
@@ -1468,4 +1490,61 @@ cbor_value_t *cbor_duplicate(cbor_value_t *val) {
     }
     }
     return dup;
+}
+
+cbor_value_t *cbor_pair_key(const cbor_value_t *val) {
+    if (val && val->type == CBOR__TYPE_PAIR) {
+        return val->pair.key;
+    }
+    return NULL;
+}
+
+cbor_value_t *cbor_pair_value(const cbor_value_t *val) {
+    if (val && val->type == CBOR__TYPE_PAIR) {
+        return val->pair.val;
+    }
+    return NULL;
+}
+
+int cbor_blob_replace(cbor_value_t *val, char **str, size_t *length) {
+    if (val && (val->type == CBOR_TYPE_STRING || val->type == CBOR_TYPE_BYTESTRING)) {
+        char *ptmp = val->blob.ptr;
+        size_t stmp = val->blob.length;
+
+        val->blob.ptr = *str;
+        val->blob.length = *length;
+        val->blob.allocated = *length;
+
+        *str = ptmp;
+        *length = stmp;
+        return 0;
+    }
+    return -1;
+}
+
+const char *cbor_type_str(const cbor_value_t *val) {
+    if (val == NULL) {
+        return "";
+    }
+    switch (val->type) {
+    case CBOR_TYPE_UINT:
+        return "integer(unsigned)";
+    case CBOR_TYPE_NEGINT:
+        return "integer()";
+    case CBOR_TYPE_BYTESTRING:
+        return "byte-string";
+    case CBOR_TYPE_STRING:
+        return "string";
+    case CBOR_TYPE_ARRAY:
+        return "array";
+    case CBOR_TYPE_MAP:
+        return "map";
+    case CBOR_TYPE_TAG:
+        return "tag";
+    case CBOR_TYPE_SIMPLE:
+        return "simple";
+    case CBOR__TYPE_PAIR:
+        return ":pair:";
+    }
+    return "";
 }

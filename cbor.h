@@ -41,7 +41,7 @@ int cbor_container_insert_after(cbor_value_t *container, cbor_value_t *elm, cbor
 int cbor_container_insert_before(cbor_value_t *container, cbor_value_t *elm, cbor_value_t *val);
 
 int cbor_map_insert(cbor_value_t *map, cbor_value_t *key, cbor_value_t *val);
-int cbor_map_remove(cbor_value_t *map, const char *key);
+int cbor_map_destroy(cbor_value_t *map, const char *key);
 int cbor_map_set_integer(cbor_value_t *map, const char *key, long long integer);
 int cbor_map_set_double(cbor_value_t *map, const char *key, double dbl);
 int cbor_map_set_boolean(cbor_value_t *map, const char *key, bool boolean);
@@ -49,17 +49,17 @@ int cbor_map_set_string(cbor_value_t *map, const char *key, const char *str);
 int cbor_map_set_null(cbor_value_t *map, const char *key);
 int cbor_map_set_value(cbor_value_t *map, const char *key, cbor_value_t *value);
 
-cbor_value_t *cbor_map_dotget(cbor_value_t *map, const char *key);
-const char *cbor_map_dotget_string(cbor_value_t *map, const char *key);
-long long cbor_map_dotget_integer(cbor_value_t *map, const char *key);
-bool cbor_map_dotget_boolean(cbor_value_t *map, const char *key);
-double cbor_map_dotget_double(cbor_value_t *map, const char *key);
+cbor_value_t *cbor_map_dotget(const cbor_value_t *map, const char *key);
+const char *cbor_map_dotget_string(const cbor_value_t *map, const char *key);
+long long cbor_map_dotget_integer(const cbor_value_t *map, const char *key);
+bool cbor_map_dotget_boolean(const cbor_value_t *map, const char *key);
+double cbor_map_dotget_double(const cbor_value_t *map, const char *key);
 
-cbor_value_t *cbor_array_get(cbor_value_t *array, int idx);
-const char *cbor_array_get_string(cbor_value_t *array, int idx);
-long long cbor_array_get_integer(cbor_value_t *array, int idx);
-double cbor_array_get_double(cbor_value_t *array, int idx);
-bool cbor_array_get_boolean(cbor_value_t *array, int idx);
+cbor_value_t *cbor_array_get(const cbor_value_t *array, int idx);
+const char *cbor_array_get_string(const cbor_value_t *array, int idx);
+long long cbor_array_get_integer(const cbor_value_t *array, int idx);
+double cbor_array_get_double(const cbor_value_t *array, int idx);
+bool cbor_array_get_boolean(const cbor_value_t *array, int idx);
 
 long long cbor_integer(const cbor_value_t *val);
 double cbor_real(const cbor_value_t *val);

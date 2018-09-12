@@ -319,7 +319,7 @@ int cbor_map_set(cbor_value_t *map, const char *key, cbor_value_t *val) {
     return -1;
 }
 
-int cbor_map_remove(cbor_value_t *map, const char *key) {
+int cbor_map_destroy(cbor_value_t *map, const char *key) {
     if (!map || !key) {
         return -1;
     }
@@ -1224,7 +1224,7 @@ cbor_value_t *cbor_iter_next(cbor_iter_t *iter) {
     return current;
 }
 
-cbor_value_t *cbor_map_find(cbor_value_t *map, const char *key, size_t len) {
+cbor_value_t *cbor_map_find(const cbor_value_t *map, const char *key, size_t len) {
     cbor_value_t *var;
     if (map == NULL || map->type != CBOR_TYPE_MAP || key == NULL) {
         return NULL;
@@ -1367,9 +1367,10 @@ int cbor_map_set_value(cbor_value_t *map, const char *key, cbor_value_t *value) 
     return 0;
 }
 
-cbor_value_t *cbor_map_dotget(cbor_value_t *map, const char *key) {
+cbor_value_t *cbor_map_dotget(const cbor_value_t *map, const char *key) {
     size_t len;
     const char *ch;
+    cbor_value_t *val;
 
     while (map != NULL && map->type == CBOR_TYPE_MAP && key != NULL) {
         ch = strchr(key, '.');
@@ -1381,32 +1382,33 @@ cbor_value_t *cbor_map_dotget(cbor_value_t *map, const char *key) {
         }
         map = cbor_map_find(map, key, len);
         key = ch;
-        map = map ? map->pair.val : NULL;
+        val = map ? map->pair.val : NULL;
+        map = val;
     }
-    return map;
+    return val;
 }
 
-const char *cbor_map_dotget_string(cbor_value_t *map, const char *key) {
+const char *cbor_map_dotget_string(const cbor_value_t *map, const char *key) {
     cbor_value_t *val = cbor_map_dotget(map, key);
     return cbor_string(val);
 }
 
-long long cbor_map_dotget_integer(cbor_value_t *map, const char *key) {
+long long cbor_map_dotget_integer(const cbor_value_t *map, const char *key) {
     cbor_value_t *val = cbor_map_dotget(map, key);
     return cbor_integer(val);
 }
 
-bool cbor_map_dotget_boolean(cbor_value_t *map, const char *key) {
+bool cbor_map_dotget_boolean(const cbor_value_t *map, const char *key) {
     cbor_value_t *val = cbor_map_dotget(map, key);
     return cbor_boolean(val);
 }
 
-double cbor_map_dotget_double(cbor_value_t *map, const char *key) {
+double cbor_map_dotget_double(const cbor_value_t *map, const char *key) {
     cbor_value_t *val = cbor_map_dotget(map, key);
     return cbor_real(val);
 }
 
-cbor_value_t *cbor_array_get(cbor_value_t *array, int idx) {
+cbor_value_t *cbor_array_get(const cbor_value_t *array, int idx) {
     cbor_value_t *var = NULL;
     if (array == NULL || array->type != CBOR_TYPE_ARRAY) {
         return NULL;
@@ -1422,21 +1424,21 @@ cbor_value_t *cbor_array_get(cbor_value_t *array, int idx) {
     return var;
 }
 
-const char *cbor_array_get_string(cbor_value_t *array, int idx) {
+const char *cbor_array_get_string(const cbor_value_t *array, int idx) {
     cbor_value_t *val = cbor_array_get(array, idx);
     return cbor_string(val);
 }
 
-long long cbor_array_get_integer(cbor_value_t *array, int idx) {
+long long cbor_array_get_integer(const cbor_value_t *array, int idx) {
     cbor_value_t *val = cbor_array_get(array, idx);
     return cbor_integer(val);
 }
-double cbor_array_get_double(cbor_value_t *array, int idx) {
+double cbor_array_get_double(const cbor_value_t *array, int idx) {
     cbor_value_t *val = cbor_array_get(array, idx);
     return cbor_real(val);
 }
 
-bool cbor_array_get_boolean(cbor_value_t *array, int idx) {
+bool cbor_array_get_boolean(const cbor_value_t *array, int idx) {
     cbor_value_t *val = cbor_array_get(array, idx);
     return cbor_boolean(val);
 }

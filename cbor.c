@@ -5,6 +5,7 @@
 #include <math.h>
 #include <float.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 /* Major Types */
 typedef enum {
@@ -117,6 +118,28 @@ int cbor_blob_append(cbor_value_t *val, const char *src, size_t length) {
         return 0;
     }
     return -1;
+}
+
+int cbor_blob_append_v(cbor_value_t *val, const char *fmt, ...) {
+    va_list ap, cpy;
+    int length;
+    char *str;
+    va_start(ap, fmt);
+    va_copy(cpy, ap);
+
+    length = vsnprintf(NULL, 0, fmt, cpy);
+    str = (char *)malloc(length + 1);
+
+    if (str) {
+        length = vsnprintf(str, length + 1, fmt, ap);
+        length = cbor_blob_append(val, str, length);
+        free(str);
+    } else {
+        length = -1;
+    }
+
+    va_end(ap);
+    return length;
 }
 
 int cbor_blob_append_byte(cbor_value_t *val, uint8_t byte) {

@@ -26,6 +26,7 @@ const char *cbor_type_str(const cbor_value_t *val);
 int cbor_destroy(cbor_value_t *val);
 
 int cbor_blob_append(cbor_value_t *val, const char *src, size_t length);
+int cbor_blob_append_v(cbor_value_t *val, const char *fmt, ...);
 int cbor_blob_append_byte(cbor_value_t *val, uint8_t byte);
 int cbor_blob_append_word(cbor_value_t *val, uint16_t word);
 int cbor_blob_append_dword(cbor_value_t *val, uint32_t dword);

@@ -1254,7 +1254,8 @@ cbor_value_t *cbor_map_find(const cbor_value_t *map, const char *key, size_t len
     }
     list_foreach(var, &map->container, entry) {
         if (var->pair.key->type == CBOR_TYPE_STRING) {
-            if (!strncmp(var->pair.key->blob.ptr, key, len)) {
+            if (var->pair.key->blob.length == len
+                && !strncmp(var->pair.key->blob.ptr, key, len)) {
                 break;
             }
         }

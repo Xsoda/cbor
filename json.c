@@ -105,6 +105,13 @@ static void lexer_skip_whitespace(lexer_t *lexer) {
         } else if (isspace(ch)) {
             lexer->cursor++;
             lexer->linoff++;
+        } else if (ch == '#') {
+            while (lexer->cursor < lexer->eof
+                   && *lexer->cursor != '\n'
+                   && *lexer->cursor != '\r') {
+                lexer->cursor++;
+                lexer->linoff++;
+            }
         } else if (ch == '/' && lexer->cursor + 2 < lexer->eof) {
             int next = lexer->cursor[1];
             if (next == '/') {
@@ -629,6 +636,7 @@ cbor_value_t *cbor_json_loads(const void *src, int size) {
     }
     lexer.eof = src + size;
     lexer.cursor = lexer.source;
+    lexer.linst = lexer.source;
     lexer.linum = 1;
     lexer.linoff = 0;
     json = json_parse_value(&lexer);

@@ -50,6 +50,7 @@ int cbor_map_set_string(cbor_value_t *map, const char *key, const char *str);
 int cbor_map_set_null(cbor_value_t *map, const char *key);
 int cbor_map_set_value(cbor_value_t *map, const char *key, cbor_value_t *value);
 
+cbor_value_t *cbor_map_unlink(cbor_value_t *map, const char *key);
 cbor_value_t *cbor_map_dotget(const cbor_value_t *map, const char *key);
 const char *cbor_map_dotget_string(const cbor_value_t *map, const char *key);
 long long cbor_map_dotget_integer(const cbor_value_t *map, const char *key);
@@ -88,6 +89,7 @@ cbor_value_t *cbor_init_array();
 cbor_value_t *cbor_init_integer(long long l);
 cbor_value_t *cbor_init_string(const char *str, int len);
 cbor_value_t *cbor_init_double(double d);
+cbor_value_t *cbor_init_bytestring(const char *str, int len);
 
 cbor_value_t *cbor_container_first(const cbor_value_t *container);
 cbor_value_t *cbor_container_last(const cbor_value_t *container);

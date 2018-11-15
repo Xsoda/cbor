@@ -1205,6 +1205,12 @@ cbor_value_t *cbor_init_string(const char *str, int len) {
     return val;
 }
 
+cbor_value_t *cbor_init_bytestring(const char *str, int len) {
+    cbor_value_t *val = cbor_create(CBOR_TYPE_BYTESTRING);
+    cbor_blob_append(val, str, len);
+    return val;
+}
+
 cbor_value_t *cbor_init_double(double d) {
     cbor_value_t *val = cbor_create(CBOR_TYPE_SIMPLE);
     val->simple.ctrl = CBOR_SIMPLE_REAL;
@@ -1400,7 +1406,7 @@ int cbor_map_set_value(cbor_value_t *map, const char *key, cbor_value_t *value) 
 cbor_value_t *cbor_map_dotget(const cbor_value_t *map, const char *key) {
     size_t len;
     const char *ch;
-    cbor_value_t *val;
+    cbor_value_t *val = NULL;
 
     while (map != NULL && map->type == CBOR_TYPE_MAP && key != NULL) {
         ch = strchr(key, '.');
@@ -1414,6 +1420,35 @@ cbor_value_t *cbor_map_dotget(const cbor_value_t *map, const char *key) {
         key = ch;
         val = map ? map->pair.val : NULL;
         map = val;
+    }
+    return val;
+}
+
+cbor_value_t *cbor_map_unlink(cbor_value_t *map, const char *key) {
+    size_t len;
+    const char *ch;
+    cbor_value_t *val = map;
+
+    while (map != NULL && map->type == CBOR_TYPE_MAP && key != NULL) {
+        ch = strchr(key, '.');
+        if (ch) {
+            len = ch - key;
+            ch += 1;
+        } else {
+            len = strlen(key);
+        }
+        map = cbor_map_find(map, key, len);
+        key = ch;
+        map = key ? map->pair.val : map;
+    }
+
+    if (map && map->type == CBOR__TYPE_PAIR) {
+        cbor_container_remove(val, map);
+        val = map->pair.val;
+        map->pair.val = NULL;
+        cbor_destroy(map);
+    } else {
+        val = NULL;
     }
     return val;
 }

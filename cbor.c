@@ -197,6 +197,21 @@ int cbor_container_size(const cbor_value_t *container) {
     return size;
 }
 
+int cbor_container_clear(cbor_value_t *container) {
+    cbor_value_t *var, *tvar;
+    if (!container) {
+        return -1;
+    }
+
+    if (container->type == CBOR_TYPE_ARRAY || container->type == CBOR_TYPE_MAP) {
+        list_foreach_safe(var, &container->container, entry, tvar) {
+            list_remove(&container->container, var, entry);
+            cbor_destroy(var);
+        }
+    }
+    return 0;
+}
+
 int cbor_container_swap(cbor_value_t *ca, cbor_value_t *cb) {
     if (ca
         && cb

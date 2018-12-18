@@ -1075,14 +1075,14 @@ unsigned long long cbor_raw_uint(const cbor_value_t *val) {
 }
 
 int cbor_string_size(const cbor_value_t *val) {
-    if (cbor_is_string(val)) {
+    if (cbor_is_string(val) || cbor_is_bytestring(val)) {
         return val->blob.length;
     }
     return 0;
 }
 
 const char *cbor_string(const cbor_value_t *val) {
-    if (cbor_is_string(val)) {
+    if (cbor_is_string(val) || cbor_is_bytestring(val)) {
         return val->blob.ptr;
     }
     return 0;

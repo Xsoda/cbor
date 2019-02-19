@@ -308,6 +308,7 @@ cbor_value_t *json_parse_array(lexer_t *lexer) {
             lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
             cbor_destroy(array);
             array = NULL;
+            break;
         }
     }
     return array;

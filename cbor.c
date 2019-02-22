@@ -228,7 +228,7 @@ int cbor_container_insert_tail(cbor_value_t *container, cbor_value_t *val) {
     }
     if (container->type == CBOR_TYPE_ARRAY || container->type == CBOR_TYPE_MAP) {
         assert(val->entry.le_next == NULL && val->entry.le_prev == NULL);
-
+        assert((container->type == CBOR_TYPE_MAP && val->type == CBOR__TYPE_PAIR) || container->type == CBOR_TYPE_ARRAY);
         list_insert_tail(&container->container, val, entry);
         return 0;
     }
@@ -1172,6 +1172,10 @@ bool cbor_is_tag(const cbor_value_t *val) {
     return val && val->type == CBOR_TYPE_TAG;
 }
 
+bool cbor_is_number(const cbor_value_t *val) {
+    return cbor_is_integer(val) || cbor_is_double(val);
+}
+
 cbor_type cbor_get_type(cbor_value_t *val) {
     return val->type;
 }
@@ -1439,7 +1443,7 @@ cbor_value_t *cbor_map_dotget(const cbor_value_t *map, const char *key) {
     return val;
 }
 
-cbor_value_t *cbor_map_unlink(cbor_value_t *map, const char *key) {
+cbor_value_t *cbor_map_remove(cbor_value_t *map, const char *key) {
     size_t len;
     const char *ch;
     cbor_value_t *val = map;
@@ -1459,9 +1463,7 @@ cbor_value_t *cbor_map_unlink(cbor_value_t *map, const char *key) {
 
     if (map && map->type == CBOR__TYPE_PAIR) {
         cbor_container_remove(val, map);
-        val = map->pair.val;
-        map->pair.val = NULL;
-        cbor_destroy(map);
+        val = map;
     } else {
         val = NULL;
     }
@@ -1612,7 +1614,7 @@ const char *cbor_type_str(const cbor_value_t *val) {
     case CBOR_TYPE_UINT:
         return "integer(unsigned)";
     case CBOR_TYPE_NEGINT:
-        return "integer()";
+        return "integer(signed)";
     case CBOR_TYPE_BYTESTRING:
         return "byte-string";
     case CBOR_TYPE_STRING:

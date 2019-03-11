@@ -1463,6 +1463,35 @@ cbor_value_t *cbor_map_remove(cbor_value_t *map, const char *key) {
 
     if (map && map->type == CBOR__TYPE_PAIR) {
         cbor_container_remove(val, map);
+        val = map->pair.val;
+        map->pair.val = NULL;
+        cbor_destroy(map);
+    } else {
+        val = NULL;
+    }
+    return val;
+}
+
+cbor_value_t *cbor_map_unlink(cbor_value_t *map, const char *key) {
+    size_t len;
+    const char *ch;
+    cbor_value_t *val = map;
+
+    while (map != NULL && map->type == CBOR_TYPE_MAP && key != NULL) {
+        ch = strchr(key, '.');
+        if (ch) {
+            len = ch - key;
+            ch += 1;
+        } else {
+            len = strlen(key);
+        }
+        map = cbor_map_find(map, key, len);
+        key = ch;
+        map = key ? map->pair.val : map;
+    }
+
+    if (map && map->type == CBOR__TYPE_PAIR) {
+        cbor_container_remove(val, map);
         val = map;
     } else {
         val = NULL;

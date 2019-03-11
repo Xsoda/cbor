@@ -1470,6 +1470,33 @@ cbor_value_t *cbor_map_remove(cbor_value_t *map, const char *key) {
     return val;
 }
 
+cbor_value_t *cbor_map_unlink(cbor_value_t *map, const char *key) {
+    size_t len;
+    const char *ch;
+    cbor_value_t *val = map;
+
+    while (map != NULL && map->type == CBOR_TYPE_MAP && key != NULL) {
+        ch = strchr(key, '.');
+        if (ch) {
+            len = ch - key;
+            ch += 1;
+        } else {
+            len = strlen(key);
+        }
+        map = cbor_map_find(map, key, len);
+        key = ch;
+        map = key ? map->pair.val : map;
+    }
+
+    if (map && map->type == CBOR__TYPE_PAIR) {
+        cbor_container_remove(val, map);
+        val = map;
+    } else {
+        val = NULL;
+    }
+    return val;
+}
+
 const char *cbor_map_dotget_string(const cbor_value_t *map, const char *key) {
     cbor_value_t *val = cbor_map_dotget(map, key);
     return cbor_string(val);

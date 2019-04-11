@@ -755,8 +755,13 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
                     i += 3;
                 }
                 if (codepoint != -1) {
-                    if (codepoint < 0x7F) {
-                        cbor_blob_append_byte(dst, codepoint);
+                    if (codepoint <= 0x7F) {
+                        if (isprint(codepoint)) {
+                            cbor_blob_append_byte(dst, codepoint);
+                        } else {
+                            int len = snprintf(buffer, sizeof(buffer), "\\u%04x", codepoint);
+                            cbor_blob_append(dst, buffer, len);
+                        }
                     } else if (codepoint <= 0xD7FF || (codepoint >= 0xE000 && codepoint <= 0xFFFF)) {
                         int len = snprintf(buffer, sizeof(buffer), "\\u%04x", codepoint);
                         cbor_blob_append(dst, buffer, len);

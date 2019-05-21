@@ -212,6 +212,41 @@ int cbor_container_clear(cbor_value_t *container) {
     return 0;
 }
 
+/* container: [A, B, C, D, E, F, G]
+ * sub: []
+ * split E
+ *
+ * ==>
+ *
+ * container: [F, G]
+ * sub: [A, B, C, D, E]
+ */
+int cbor_container_split(cbor_value_t *container, cbor_value_t *val, cbor_value_t *sub) {
+    bool found = false;
+    cbor_value_t *var, *tvar;
+    if (!container || !sub) {
+        return -1;
+    }
+
+    if ((container->type == CBOR_TYPE_ARRAY || container->type == CBOR_TYPE_MAP)
+        && container->type == sub->type) {
+        list_foreach_safe(var, &container->container, entry, tvar) {
+            if (var == val) {
+                assert(found == false);
+                found = true;
+                continue;
+            } else if (found) {
+                list_remove(&container->container, var, entry);
+                list_insert_tail(&sub->container, var, entry);
+            }
+        }
+    }
+    if (found) {
+        cbor_container_swap(container, sub);
+    }
+    return 0;
+}
+
 int cbor_container_swap(cbor_value_t *ca, cbor_value_t *cb) {
     if (ca
         && cb

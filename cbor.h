@@ -37,6 +37,7 @@ int cbor_container_empty(const cbor_value_t *container);
 int cbor_container_size(const cbor_value_t *container);
 int cbor_container_swap(cbor_value_t *ca, cbor_value_t *cb);
 int cbor_container_clear(cbor_value_t *container);
+int cbor_container_split(cbor_value_t *container, cbor_value_t *val, cbor_value_t *sub);
 int cbor_container_insert_tail(cbor_value_t *container, cbor_value_t *val);
 int cbor_container_insert_head(cbor_value_t *container, cbor_value_t *val);
 int cbor_container_insert_after(cbor_value_t *container, cbor_value_t *elm, cbor_value_t *val);

@@ -635,6 +635,9 @@ cbor_value_t *cbor_json_loads(const void *src, int size) {
     if (size < 0) {
         size = strlen(src);
     }
+    if (!src) {
+        return NULL;
+    }
     lexer.eof = src + size;
     lexer.cursor = lexer.source;
     lexer.linst = lexer.source;

@@ -632,11 +632,11 @@ cbor_value_t *cbor_json_loads(const void *src, int size) {
     cbor_value_t *json;
     memset(&lexer, 0, sizeof(lexer));
     lexer.source = src;
-    if (size < 0) {
-        size = strlen(src);
-    }
     if (!src) {
         return NULL;
+    }
+    if (size < 0) {
+        size = strlen(src);
     }
     lexer.eof = src + size;
     lexer.cursor = lexer.source;

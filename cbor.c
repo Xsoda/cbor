@@ -94,7 +94,7 @@ int cbor_destroy(cbor_value_t *val) {
     return 0;
 }
 
-static int cbor_blob_avalible(cbor_value_t *val, int size) {
+static int cbor_blob_avalible(cbor_value_t *val, size_t size) {
     if (val && (val->type == CBOR_TYPE_BYTESTRING || val->type == CBOR_TYPE_STRING)) {
         if (val->blob.allocated - val->blob.length < size + 1) {
             char *tmp = (char *)realloc(val->blob.ptr, val->blob.allocated + size + 1);

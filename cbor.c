@@ -82,13 +82,13 @@ int cbor_destroy(cbor_value_t *val) {
             list_remove(&val->container, var, entry);
             cbor_destroy(var);
         }
-    }
-    if (val->type == CBOR_TYPE_BYTESTRING || val->type == CBOR_TYPE_STRING) {
+    } else if (val->type == CBOR_TYPE_BYTESTRING || val->type == CBOR_TYPE_STRING) {
         free(val->blob.ptr);
-    }
-    if (val->type == CBOR__TYPE_PAIR) {
+    } else if (val->type == CBOR__TYPE_PAIR) {
         cbor_destroy(val->pair.key);
         cbor_destroy(val->pair.val);
+    } else if (val->type == CBOR_TYPE_TAG) {
+        cbor_destroy(val->tag.content);
     }
     free(val);
     return 0;

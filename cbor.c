@@ -63,8 +63,7 @@ cbor_value_t *cbor_create(cbor_type type) {
     val->type = type;
     if (val->type == CBOR_TYPE_ARRAY || val->type == CBOR_TYPE_MAP) {
         list_init(&val->container);
-    }
-    if (val->type == CBOR_TYPE_STRING || val->type == CBOR_TYPE_BYTESTRING) {
+    } else if (val->type == CBOR_TYPE_STRING || val->type == CBOR_TYPE_BYTESTRING) {
         val->blob.ptr = (char *)malloc(32);
         val->blob.allocated = 32;
     }
@@ -94,24 +93,21 @@ int cbor_destroy(cbor_value_t *val) {
     return 0;
 }
 
-static int cbor_blob_avalible(cbor_value_t *val, size_t size) {
+static size_t cbor_blob_avalible(cbor_value_t *val, size_t size) {
     if (val && (val->type == CBOR_TYPE_BYTESTRING || val->type == CBOR_TYPE_STRING)) {
         if (val->blob.allocated - val->blob.length < size + 1) {
             char *tmp = (char *)realloc(val->blob.ptr, val->blob.allocated + size + 1);
             if (tmp) {
                 val->blob.ptr = tmp;
                 val->blob.allocated += size + 1;
-            } else {
-                return -1;
             }
         }
-        return val->blob.allocated - val->blob.length;
     }
-    return -1;
+    return val->blob.allocated - val->blob.length;
 }
 
 int cbor_blob_append(cbor_value_t *val, const char *src, size_t length) {
-    if (cbor_blob_avalible(val, length) > 0) {
+    if (cbor_blob_avalible(val, length) > length) {
         memcpy(val->blob.ptr + val->blob.length, src, length);
         val->blob.length += length;
         val->blob.ptr[val->blob.length] = 0;
@@ -143,7 +139,7 @@ int cbor_blob_append_v(cbor_value_t *val, const char *fmt, ...) {
 }
 
 int cbor_blob_append_byte(cbor_value_t *val, uint8_t byte) {
-    if (cbor_blob_avalible(val, 1) > 0) {
+    if (cbor_blob_avalible(val, 1) > 1) {
         int length = val->blob.length;
         val->blob.ptr[length] = byte;
         val->blob.length += 1;
@@ -153,7 +149,7 @@ int cbor_blob_append_byte(cbor_value_t *val, uint8_t byte) {
 }
 
 int cbor_blob_append_word(cbor_value_t *val, uint16_t word) {
-    if (cbor_blob_avalible(val, 2) > 0) {
+    if (cbor_blob_avalible(val, 2) > 2) {
         *(uint16_t *)&val->blob.ptr[val->blob.length] = htobe16(word);
         val->blob.length += 2;
         return 0;
@@ -162,7 +158,7 @@ int cbor_blob_append_word(cbor_value_t *val, uint16_t word) {
 }
 
 int cbor_blob_append_dword(cbor_value_t *val, uint32_t dword) {
-    if (cbor_blob_avalible(val, 4) > 0) {
+    if (cbor_blob_avalible(val, 4) > 4) {
         *(uint32_t *)&val->blob.ptr[val->blob.length] = htobe32(dword);
         val->blob.length += 4;
         return 0;
@@ -171,7 +167,7 @@ int cbor_blob_append_dword(cbor_value_t *val, uint32_t dword) {
 }
 
 int cbor_blob_append_qword(cbor_value_t *val, uint64_t qword) {
-    if (cbor_blob_avalible(val, 8) > 0) {
+    if (cbor_blob_avalible(val, 8) > 8) {
         *(uint64_t *)&val->blob.ptr[val->blob.length] = htobe64(qword);
         val->blob.length += 8;
         return 0;

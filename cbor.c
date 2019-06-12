@@ -83,11 +83,15 @@ int cbor_destroy(cbor_value_t *val) {
         }
     } else if (val->type == CBOR_TYPE_BYTESTRING || val->type == CBOR_TYPE_STRING) {
         free(val->blob.ptr);
+        val->blob.ptr = NULL;
     } else if (val->type == CBOR__TYPE_PAIR) {
         cbor_destroy(val->pair.key);
+        val->pair.key = NULL;
         cbor_destroy(val->pair.val);
+        val->pair.val = NULL;
     } else if (val->type == CBOR_TYPE_TAG) {
         cbor_destroy(val->tag.content);
+        val->tag.content = NULL;
     }
     free(val);
     return 0;
@@ -382,7 +386,7 @@ int cbor_map_destroy(cbor_value_t *map, const char *key) {
     if (map->type == CBOR_TYPE_MAP) {
         cbor_value_t *var, *tvar;
         list_foreach_safe(var, &map->container, entry, tvar) {
-            if (!strcmp(key, var->pair.key->blob.ptr)) {
+            if (cbor_is_string(var->pair.key) && !strcmp(key, var->pair.key->blob.ptr)) {
                 cbor_container_remove(map, var);
                 cbor_destroy(var);
                 return 0;

@@ -174,7 +174,7 @@ void json_lexer_error(lexer_t *lexer) {
     length += snprintf(buffer + length, sizeof(buffer) - length, "%*s\n", offset, "^");
     length += snprintf(buffer + length, sizeof(buffer) - length, "%*s\n", offset, "|");
     length += snprintf(buffer + length, sizeof(buffer) - length, "%*s\n", offset, json_err_str[lexer->last_error]);
-    fprintf(stderr, "%s", buffer);
+    fprintf(stdout, "%s", buffer);
 }
 
 cbor_value_t *json_parse_object(lexer_t *lexer) {
@@ -646,6 +646,31 @@ cbor_value_t *cbor_json_loads(const void *src, int size) {
     json = json_parse_value(&lexer);
     if (lexer.last_error != JSON_ERR_NONE) {
         json_lexer_error(&lexer);
+    }
+    return json;
+}
+
+cbor_value_t *cbor_json_loadss(const void *src, size_t *size) {
+    lexer_t lexer;
+    cbor_value_t *json;
+    memset(&lexer, 0, sizeof(lexer));
+    lexer.source = src;
+    if (!src) {
+        return NULL;
+    }
+    lexer.eof = src + *size;
+    lexer.cursor = lexer.source;
+    lexer.linst = lexer.source;
+    lexer.linum = 1;
+    lexer.linoff = 0;
+    json = json_parse_value(&lexer);
+    if (lexer.last_error != JSON_ERR_NONE) {
+        json_lexer_error(&lexer);
+    }
+    if (json == NULL) {
+        *size = 0;
+    } else {
+        *size = lexer.cursor - lexer.source;
     }
     return json;
 }

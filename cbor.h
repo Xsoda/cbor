@@ -116,6 +116,8 @@ char *cbor_dumps(const cbor_value_t *src, size_t *length);
 
 cbor_value_t *cbor_json_loads(const void *src, int size);
 char *cbor_json_dumps(const cbor_value_t *src, size_t *length, bool pretty);
+cbor_value_t *cbor_json_loadss(const void *src, size_t *size);
+
 
 cbor_value_t *cbor_json_loadf(const char *path);
 int cbor_json_dumpf(cbor_value_t *val, const char *path, bool pretty);

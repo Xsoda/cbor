@@ -877,7 +877,7 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
         }
         cbor_blob_append_byte(dst, '}');
     } else if (cbor_is_double(src)) {
-        int len = snprintf(buffer, sizeof(buffer), "%g", cbor_real(src));
+        int len = snprintf(buffer, sizeof(buffer), "%lf", cbor_real(src));
         cbor_blob_append(dst, buffer, len);
     } else if (cbor_is_null(src)) {
         cbor_blob_append(dst, "null", 4);

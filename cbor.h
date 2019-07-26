@@ -52,6 +52,7 @@ int cbor_map_set_string(cbor_value_t *map, const char *key, const char *str);
 int cbor_map_set_null(cbor_value_t *map, const char *key);
 int cbor_map_set_value(cbor_value_t *map, const char *key, cbor_value_t *value);
 
+cbor_value_t *cbor_map_find(const cbor_value_t *map, const char *key, size_t len);
 cbor_value_t *cbor_map_unlink(cbor_value_t *map, const char *key);
 cbor_value_t *cbor_map_remove(cbor_value_t *map, const char *key);
 cbor_value_t *cbor_map_dotget(const cbor_value_t *map, const char *key);

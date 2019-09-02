@@ -403,7 +403,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
     cbor_value_t *val = NULL;
     size_t offset = 0;
 
-    if (src == NULL || length == NULL) {
+    if (src == NULL || length == NULL || *length == 0) {
         return NULL;
     }
 
@@ -479,6 +479,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                 cbor_value_t *sub = cbor_loads(src + offset, &remain);
                 if (sub && sub->type == CBOR_TYPE_BYTESTRING) {
                     cbor_blob_append(val, sub->blob.ptr, sub->blob.length);
+                    val->blob.ptr[val->blob.length] = 0;
                     offset += remain;
                 } else {
                     /* error */
@@ -493,12 +494,10 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                 }
             }
         }
-        if (val) {
-            if (addition != 31) {
-                cbor_blob_append(val, &src[offset], len);
-                offset += len;
-            }
+        if (addition != 31 && offset + len <= *length) {
+            cbor_blob_append(val, &src[offset], len);
             val->blob.ptr[val->blob.length] = 0;
+            offset += len;
         }
         break;
     }
@@ -530,6 +529,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                 cbor_value_t *sub = cbor_loads(src + offset, &remain);
                 if (sub && sub->type == CBOR_TYPE_STRING) {
                     cbor_blob_append(val, sub->blob.ptr, sub->blob.length);
+                    val->blob.ptr[val->blob.length] = 0;
                     offset += remain;
                 } else {
                     /* error */
@@ -544,12 +544,14 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                 }
             }
         }
-        if (val) {
-            if (addition != 31) {
-                cbor_blob_append(val, &src[offset], len);
-                offset += len;
-            }
+        if (addition != 31 && offset + len <= *length) {
+            cbor_blob_append(val, &src[offset], len);
             val->blob.ptr[val->blob.length] = 0;
+            offset += len;
+        } else {
+            cbor_destroy(val);
+            val = NULL;
+            offset = 0;
         }
         break;
     }

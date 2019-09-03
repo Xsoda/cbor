@@ -482,6 +482,7 @@ cbor_value_t *json_parse_string(lexer_t *lexer) {
 }
 
 cbor_value_t *json_parse_number(lexer_t *lexer) {
+    char *end;
     int sign = 0;
     int frac = 0;
     int exponent = 0;
@@ -538,9 +539,15 @@ cbor_value_t *json_parse_number(lexer_t *lexer) {
 
     if (isprint(tail)
         && (isalpha(tail) || isdigit(tail))) {
-        lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
+        /* handle nan, inf, -inf */
+        double dbl = strtod(ptr, &end);
+        if (isnan(dbl) || isinf(dbl)) {
+            lexer->cursor = end;
+            num = cbor_init_double(dbl);
+        } else {
+            lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
+        }
     } else {
-        char *end;
         if (frac || exponent) {
             num = cbor_init_double(strtod(ptr, &end));
         } else {

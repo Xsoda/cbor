@@ -542,6 +542,7 @@ cbor_value_t *json_parse_number(lexer_t *lexer) {
         /* handle nan, inf, -inf */
         double dbl = strtod(ptr, &end);
         if (isnan(dbl) || isinf(dbl)) {
+            lexer->linoff += (end - ptr);
             lexer->cursor = end;
             num = cbor_init_double(dbl);
         } else {
@@ -622,12 +623,75 @@ cbor_value_t *json_parse_value(lexer_t *lexer) {
             } else {
                 return cbor_init_null();
             }
+        } else if (!strncasecmp(lexer->cursor, "nan", 3)) {
+            double dbl = strtod(lexer->cursor, NULL);
+            lexer->cursor += 3;
+            lexer->linoff += 3;
+            int tail = (unsigned char)*lexer->cursor;
+            if (isprint(tail)
+                && (isalpha(tail)
+                    || isdigit(tail))) {
+                lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
+                return NULL;
+            } else {
+                return cbor_init_double(dbl);
+            }
         } else {
             lexer->last_error = JSON_ERR_CHARACTER_SEQUENCE;
             return NULL;
         }
     } else if (leader == '-' || isdigit(leader)) {
         return json_parse_number(lexer);
+    } else if (leader == 'i' || leader == 'I') {
+        char *end;
+        if (!strncasecmp(lexer->cursor, "infinity", 8)) {
+            double dbl = strtod(lexer->cursor, &end);
+            lexer->cursor += 8;
+            lexer->linoff += 8;
+            int tail = (unsigned char)*lexer->cursor;
+            if (isprint(tail)
+                && (isalpha(tail)
+                    || isdigit(tail))) {
+                lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
+                return NULL;
+            } else {
+                return cbor_init_double(dbl);
+            }
+        } else if (!strncasecmp(lexer->cursor, "inf", 3)) {
+            double dbl = strtod(lexer->cursor, &end);
+            lexer->cursor += 3;
+            lexer->linoff += 3;
+            int tail = (unsigned char)*lexer->cursor;
+            if (isprint(tail)
+                && (isalpha(tail)
+                    || isdigit(tail))) {
+                lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
+                return NULL;
+            } else {
+                return cbor_init_double(dbl);
+            }
+        } else {
+            lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
+            return NULL;
+        }
+    } else if (leader == 'N') {
+        if (!strncasecmp(lexer->cursor, "nan", 3)) {
+            double dbl = strtod(lexer->cursor, NULL);
+            lexer->cursor += 3;
+            lexer->linoff += 3;
+            int tail = (unsigned char)*lexer->cursor;
+            if (isprint(tail)
+                && (isalpha(tail)
+                    || isdigit(tail))) {
+                lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
+                return NULL;
+            } else {
+                return cbor_init_double(dbl);
+            }
+        } else {
+            lexer->last_error = JSON_ERR_CHARACTER_SEQUENCE;
+            return NULL;
+        }
     } else {
         lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
         return NULL;

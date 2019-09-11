@@ -61,6 +61,9 @@ static void lexer_skip_block_comment(lexer_t *lexer) {
                 lexer->linoff += 2;
                 lexer->cursor += 2;
                 lexer_skip_block_comment(lexer);
+            } else {
+                lexer->cursor++;
+                lexer->linoff++;
             }
         } else if (ch == '\r') {
             lexer->linum++;

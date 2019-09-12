@@ -344,7 +344,7 @@ cbor_value_t *cbor_container_remove(cbor_value_t *container, cbor_value_t *elm) 
         return NULL;
     }
     if (container->type == CBOR_TYPE_ARRAY || container->type == CBOR_TYPE_MAP) {
-        assert(elm->entry.le_next != NULL || elm->entry.le_prev != NULL);
+        assert(elm->entry.le_next != NULL && elm->entry.le_prev != NULL);
         list_remove(&container->container, elm, entry);
         elm->entry.le_next = NULL;
         elm->entry.le_prev = NULL;
@@ -361,6 +361,30 @@ int cbor_container_concat(cbor_value_t *dst, cbor_value_t *src) {
             || dst->type == CBOR_TYPE_MAP)) {
         list_concat(&dst->container, &src->container, entry);
         return 0;
+    }
+    return -1;
+}
+
+int cbor_container_slice(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm) {
+    if (dst
+        && src
+        && elm
+        && dst->type == src->type
+        && (dst->type == CBOR_TYPE_ARRAY
+            || dst->type == CBOR_TYPE_MAP)) {
+        assert(cbor_container_empty(dst));
+        cbor_value_t *prev = list_prev(elm, _cbor_cname, entry);
+        if (prev == NULL) {
+            return cbor_container_swap(dst, src);
+        } else {
+            dst->container.lh_last = src->container.lh_last;
+            dst->container.lh_first = elm;
+
+            prev->entry.le_next = NULL;
+            src->container.lh_last = &list_next(prev, entry);
+            elm->entry.le_prev = &list_first(&dst->container);
+            return 0;
+        }
     }
     return -1;
 }

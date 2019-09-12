@@ -102,6 +102,7 @@ cbor_value_t *cbor_container_next(const cbor_value_t *container, cbor_value_t *e
 cbor_value_t *cbor_container_prev(const cbor_value_t *container, cbor_value_t *elm);
 cbor_value_t *cbor_container_remove(cbor_value_t *container, cbor_value_t *elm);
 int cbor_container_concat(cbor_value_t *dst, cbor_value_t *src);
+int cbor_container_slice(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm); /* TODO: Debug */
 
 cbor_value_t *cbor_duplicate(cbor_value_t *val);
 

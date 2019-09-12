@@ -344,7 +344,7 @@ cbor_value_t *cbor_container_remove(cbor_value_t *container, cbor_value_t *elm) 
         return NULL;
     }
     if (container->type == CBOR_TYPE_ARRAY || container->type == CBOR_TYPE_MAP) {
-        assert(elm->entry.le_next != NULL && elm->entry.le_prev != NULL);
+        assert(elm->entry.le_next != NULL || elm->entry.le_prev != NULL);
         list_remove(&container->container, elm, entry);
         elm->entry.le_next = NULL;
         elm->entry.le_prev = NULL;

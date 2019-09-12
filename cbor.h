@@ -37,7 +37,6 @@ int cbor_container_empty(const cbor_value_t *container);
 int cbor_container_size(const cbor_value_t *container);
 int cbor_container_swap(cbor_value_t *ca, cbor_value_t *cb);
 int cbor_container_clear(cbor_value_t *container);
-int cbor_container_split(cbor_value_t *container, cbor_value_t *val, cbor_value_t *sub);
 int cbor_container_insert_tail(cbor_value_t *container, cbor_value_t *val);
 int cbor_container_insert_head(cbor_value_t *container, cbor_value_t *val);
 int cbor_container_insert_after(cbor_value_t *container, cbor_value_t *elm, cbor_value_t *val);
@@ -66,6 +65,13 @@ const char *cbor_array_get_string(const cbor_value_t *array, int idx);
 long long cbor_array_get_integer(const cbor_value_t *array, int idx);
 double cbor_array_get_double(const cbor_value_t *array, int idx);
 bool cbor_array_get_boolean(const cbor_value_t *array, int idx);
+
+int cbor_array_set_value(cbor_value_t *array, int idx, cbor_value_t *val);
+int cbor_array_set_string(cbor_value_t *array, int idx, const char *str);
+int cbor_array_set_integer(cbor_value_t *array, int idx, long long integer);
+int cbor_array_set_double(cbor_value_t *array, int idx, double dbl);
+int cbor_array_set_boolean(cbor_value_t *array, int idx, bool boolean);
+int cbor_array_set_null(cbor_value_t *array, int idx);
 
 long long cbor_integer(const cbor_value_t *val);
 double cbor_real(const cbor_value_t *val);
@@ -101,8 +107,12 @@ cbor_value_t *cbor_container_last(const cbor_value_t *container);
 cbor_value_t *cbor_container_next(const cbor_value_t *container, cbor_value_t *elm);
 cbor_value_t *cbor_container_prev(const cbor_value_t *container, cbor_value_t *elm);
 cbor_value_t *cbor_container_remove(cbor_value_t *container, cbor_value_t *elm);
+
 int cbor_container_concat(cbor_value_t *dst, cbor_value_t *src);
-int cbor_container_slice(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm); /* TODO: Debug */
+int cbor_container_slice(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *start, cbor_value_t *stop);
+int cbor_container_slice_after(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm);
+int cbor_container_slice_before(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm);
+int cbor_container_distance(const cbor_value_t *container, cbor_value_t *start, cbor_value_t *stop);
 
 cbor_value_t *cbor_duplicate(cbor_value_t *val);
 

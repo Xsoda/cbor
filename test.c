@@ -179,11 +179,14 @@
                Table 4: Examples of Encoded CBOR Data Items
 
 */
-
+#define _BSD_SOURCE
+#include <endian.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "cbor.h"
+#include "cbor.c"
+#include "json.c"
 
 const char *content[] = {
     "\x00",
@@ -491,6 +494,97 @@ int test_json() {
     return 0;
 }
 
+int assert_a_next_b(cbor_value_t *a, cbor_value_t *b) {
+    assert(a->entry.le_next == b);
+    assert(b->entry.le_prev == &a->entry.le_next);
+    return 0;
+}
+
+int assert_container_start_a(cbor_value_t *con, cbor_value_t *a) {
+    assert(a->entry.le_prev == &con->container.lh_first);
+    assert(con->container.lh_first == a);
+    return 0;
+}
+
+int assert_container_end_a(cbor_value_t *con, cbor_value_t *a) {
+    assert(con->container.lh_last == &a->entry.le_next);
+    assert(a->entry.le_next == NULL);
+    return 0;
+}
+
+int test_slice() {
+    cbor_value_t *src, *dst, *start, *stop, *first, *last, *prev, *next;
+    printf("test slice ..............\n");
+    src = cbor_init_array();
+    dst = cbor_init_array();
+    for (int i = 0; i < 100; i++) {
+        cbor_container_insert_tail(src, cbor_init_integer(i));
+    }
+    first = cbor_container_first(src);
+    last = cbor_container_last(src);
+    start = cbor_array_get(src, 50);
+    stop = cbor_container_prev(src, start);
+    cbor_container_slice_before(dst, src, start);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, stop);
+    assert_container_start_a(src, start);
+    assert_container_end_a(src, last);
+    printf("slice before done\n");
+
+    cbor_container_concat(dst, src);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, last);
+    printf("concat done\n");
+
+    stop = cbor_container_next(dst, start);
+    cbor_container_slice_after(src, dst, start);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, start);
+    assert_container_start_a(src, stop);
+    assert_container_end_a(src, last);
+    printf("slice after done\n");
+
+    cbor_container_concat(dst, src);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, last);
+    printf("concat done\n");
+
+    stop = cbor_array_get(dst, 60);
+    prev = cbor_container_prev(dst, start);
+    next = cbor_container_next(dst, stop);
+    cbor_container_slice(src, dst, start, stop);
+    assert_container_start_a(src, start);
+    assert_container_end_a(src, stop);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, last);
+    assert_a_next_b(prev, next);
+    printf("1. slice done\n");
+
+    cbor_container_clear(src);
+    start = cbor_container_first(dst);
+    stop = cbor_array_get(dst, 10);
+    first = cbor_container_next(dst, stop);
+    last = cbor_container_last(dst);
+    cbor_container_slice(src, dst, start, stop);
+    assert_container_start_a(src, start);
+    assert_container_end_a(src, stop);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, last);
+    printf("2. slice done\n");
+
+    cbor_container_clear(src);
+    start = cbor_array_get(dst, 20);
+    last = cbor_container_prev(dst, start);
+    stop = cbor_container_last(dst);
+    first = cbor_container_first(dst);
+    cbor_container_slice(src, dst, start, stop);
+    assert_container_start_a(src, start);
+    assert_container_end_a(src, stop);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, last);
+    printf("3. slice done\n");
+}
+
 int main(int argc, char **argv) {
     size_t length;
     for (int i = 0; content[i] != NULL; i++) {
@@ -527,5 +621,6 @@ int main(int argc, char **argv) {
     }
     test_f64();
     test_json();
+    test_slice();
     return 0;
 }

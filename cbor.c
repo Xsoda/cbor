@@ -483,18 +483,22 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         offset++;
         if (addition < 24) {
             val->uint = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             val->uint = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             val->uint = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             val->uint = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             val->uint = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
+        } else {
+            cbor_destroy(val);
+            offset = 0;
+            val = NULL;
         }
         break;
     }
@@ -503,18 +507,22 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         offset++;
         if (addition < 24) {
             val->uint = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             val->uint = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             val->uint = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             val->uint = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             val->uint = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
+        } else {
+            cbor_destroy(val);
+            offset = 0;
+            val = NULL;
         }
         break;
     }
@@ -524,16 +532,16 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         int len = 0;
         if (addition < 24) {
             len = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             len = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             len = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             len = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             len = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
         } else if (addition == 31) { /* indefinite */
@@ -554,6 +562,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                     val = NULL;
                     offset = 0;
                     cbor_destroy(sub);
+                    sub = NULL;
                     break;
                 }
                 if (sub) {
@@ -574,16 +583,16 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         int len = 0;
         if (addition < 24) {
             len = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             len = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             len = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             len = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             len = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
         } else if (addition == 31) { /* indefinite */
@@ -604,6 +613,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                     val = NULL;
                     offset = 0;
                     cbor_destroy(sub);
+                    sub = NULL;
                     break;
                 }
                 if (sub) {
@@ -620,20 +630,20 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
     }
     case CBOR_TYPE_ARRAY: {
         val = cbor_create(CBOR_TYPE_ARRAY);
-        offset++;
+        offset++;               /* array count */
         int len = 0;
         if (addition < 24) {
             len = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             len = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             len = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             len = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             len = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
         } else if (addition == 31) { /* indefinite */
@@ -644,7 +654,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                 }
                 size_t remain = *length - offset;
                 cbor_value_t *elm = cbor_loads(src + offset, &remain);
-                if (elm) {
+                if (elm && offset + remain <= *length) {
                     offset += remain;
                     cbor_container_insert_tail(val, elm);
                 } else {
@@ -660,7 +670,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             while (len > 0 && offset < *length) {
                 size_t remain = *length - offset;
                 cbor_value_t *elm = cbor_loads(src + offset, &remain);
-                if (elm) {
+                if (elm && offset + remain <= *length) {
                     offset += remain;
                     cbor_container_insert_tail(val, elm);
                     len--;
@@ -686,17 +696,18 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         int len = 0;
         if (addition < 24) {
             len = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             len = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             len = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             len = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
-            len = be64toh(*(uint32_t *)&src[offset]);
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
+            len = be64toh(*(uint64_t *)&src[offset]);
+            offset += 8;
         } else if (addition == 31) { /* indefinite */
             while (offset < *length) {
                 if (src[offset] == -1) {
@@ -705,11 +716,11 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                 }
                 size_t remain = *length - offset;
                 cbor_value_t *k = cbor_loads(src + offset, &remain);
-                if (k) {
+                if (k && offset + remain <= *length) {
                     offset += remain;
                     remain = *length - offset;
                     cbor_value_t *v = cbor_loads(src + offset, &remain);
-                    if (v && offset < *length) {
+                    if (v && offset + remain <= *length) {
                         offset += remain;
                         cbor_value_t *pair = cbor_create(CBOR__TYPE_PAIR);
                         pair->pair.key = k;
@@ -717,6 +728,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                         cbor_container_insert_tail(val, pair);
                     } else {
                         /* error */
+                        cbor_destroy(v);
                         cbor_destroy(k);
                         cbor_destroy(val);
                         val = NULL;
@@ -736,11 +748,11 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             while (len > 0 && offset < *length) {
                 size_t remain = *length - offset;
                 cbor_value_t *k = cbor_loads(src + offset, &remain);
-                if (k) {
+                if (k && offset + remain <= *length) {
                     offset += remain;
                     remain = *length - offset;
                     cbor_value_t *v = cbor_loads(src + offset, &remain);
-                    if (v && remain < *length) {
+                    if (v && offset + remain <= *length) {
                         offset += remain;
                         cbor_value_t *pair = cbor_create(CBOR__TYPE_PAIR);
                         pair->pair.key = k;
@@ -776,22 +788,22 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         offset++;
         if (addition < 24) {
             val->tag.item = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             val->tag.item =(unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             val->tag.item = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) {
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             val->tag.item = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) {
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             val->tag.item = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
         }
         size_t remain = *length - offset;
         val->tag.content = cbor_loads(src + offset, &remain);
-        if (val->tag.content) {
+        if (val->tag.content && offset + remain <= *length) {
             offset += remain;
         } else {
             /* error */
@@ -815,11 +827,11 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             val->simple.ctrl = CBOR_SIMPLE_NONE;
         } else if (addition == 23) { /* Undefined value */
             val->simple.ctrl = CBOR_SIMPLE_UNDEF;
-        } else if (addition == 24) { /* Simple value: extension */
+        } else if (addition == 24 && offset + 1 <= *length) { /* Simple value: extension */
             /* Reserved */
             val->simple.ctrl = src[offset];
             offset++;
-        } else if (addition == 25) { /* half float */
+        } else if (addition == 25 && offset + 2 <= *length) { /* half float */
             union {
                 uint64_t u64;
                 double dbl;
@@ -844,7 +856,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             }
             val->simple.real = f64_val.dbl;
             offset += 2;
-        } else if (addition == 26) { /* float */
+        } else if (addition == 26 && offset + 4 <= *length) { /* float */
             union {
                 uint64_t u64;
                 double dbl;
@@ -868,7 +880,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             }
             val->simple.real = f64_val.dbl;
             offset += 4;
-        } else if (addition == 27) { /* double */
+        } else if (addition == 27 && offset + 8 <= *length) { /* double */
             union {
                 uint64_t u64;
                 double dbl;

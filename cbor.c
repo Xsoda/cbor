@@ -574,6 +574,10 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             cbor_blob_append(val, &src[offset], len);
             val->blob.ptr[val->blob.length] = 0;
             offset += len;
+        } else {
+            cbor_destroy(val);
+            val = NULL;
+            offset = 0;
         }
         break;
     }
@@ -625,6 +629,10 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             cbor_blob_append(val, &src[offset], len);
             val->blob.ptr[val->blob.length] = 0;
             offset += len;
+        } else {
+            cbor_destroy(val);
+            val = NULL;
+            offset = 0;
         }
         break;
     }

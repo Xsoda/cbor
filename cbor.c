@@ -1932,3 +1932,37 @@ cbor_value_t *cbor_pointer_eval(cbor_value_t *container, const char *str) {
     }
     return NULL;
 }
+
+void cbor_value_replace(cbor_value_t *dst, cbor_value_t *src) {
+    assert(dst != NULL && src != NULL);
+    assert(dst->type != CBOR__TYPE_PAIR && src->type != CBOR__TYPE_PAIR);
+
+    if (dst->type == CBOR_TYPE_MAP || dst->type == CBOR_TYPE_ARRAY) {
+        cbor_container_clear(dst);
+    } else if (dst->type == CBOR_TYPE_STRING || dst->type == CBOR_TYPE_BYTESTRING) {
+        free(dst->blob.ptr);
+        dst->blob.ptr = NULL;
+        dst->blob.allocated = 0;
+        dst->blob.length = 0;
+    } else if (dst->type == CBOR_TYPE_TAG) {
+        cbor_destroy(dst->tag.content);
+        dst->tag.content = NULL;
+    }
+    dst->type = src->type;
+    if (src->type == CBOR_TYPE_MAP || src->type == CBOR_TYPE_ARRAY) {
+        dst->container = src->container;
+        list_init(&src->container);
+    } else if (src->type == CBOR_TYPE_STRING || src->type == CBOR_TYPE_BYTESTRING) {
+        dst->blob = src->blob;
+        memset(&src->blob, 0, sizeof(src->blob));
+    } else if (src->type == CBOR_TYPE_TAG) {
+        dst->tag = src->tag;
+        memset(&src->tag, 0, sizeof(src->tag));
+    } else if (src->type == CBOR_TYPE_SIMPLE) {
+        dst->simple = src->simple;
+    } else {
+        dst->uint = src->uint;
+    }
+    src->type = CBOR_TYPE_SIMPLE;
+    src->simple.ctrl = CBOR_SIMPLE_NULL;
+}

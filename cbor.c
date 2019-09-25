@@ -212,41 +212,6 @@ int cbor_container_clear(cbor_value_t *container) {
     return 0;
 }
 
-/* container: [A, B, C, D, E, F, G]
- * sub: []
- * split E
- *
- * ==>
- *
- * container: [F, G]
- * sub: [A, B, C, D, E]
- */
-int cbor_container_split(cbor_value_t *container, cbor_value_t *val, cbor_value_t *sub) {
-    bool found = false;
-    cbor_value_t *var, *tvar;
-    if (!container || !sub) {
-        return -1;
-    }
-
-    if ((container->type == CBOR_TYPE_ARRAY || container->type == CBOR_TYPE_MAP)
-        && container->type == sub->type) {
-        list_foreach_safe(var, &container->container, entry, tvar) {
-            if (var == val) {
-                assert(found == false);
-                found = true;
-                continue;
-            } else if (found) {
-                list_remove(&container->container, var, entry);
-                list_insert_tail(&sub->container, var, entry);
-            }
-        }
-    }
-    if (found) {
-        cbor_container_swap(container, sub);
-    }
-    return 0;
-}
-
 int cbor_container_swap(cbor_value_t *ca, cbor_value_t *cb) {
     if (ca
         && cb
@@ -365,7 +330,7 @@ int cbor_container_concat(cbor_value_t *dst, cbor_value_t *src) {
     return -1;
 }
 
-int cbor_container_slice(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm) {
+int cbor_container_slice_after(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm) {
     if (dst
         && src
         && elm
@@ -373,21 +338,99 @@ int cbor_container_slice(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm
         && (dst->type == CBOR_TYPE_ARRAY
             || dst->type == CBOR_TYPE_MAP)) {
         assert(cbor_container_empty(dst));
-        cbor_value_t *prev = list_prev(elm, _cbor_cname, entry);
-        if (prev == NULL) {
-            return cbor_container_swap(dst, src);
-        } else {
+        cbor_value_t *next = cbor_container_next(src, elm);
+        if (next) {
+            elm->entry.le_next = NULL;
             dst->container.lh_last = src->container.lh_last;
-            dst->container.lh_first = elm;
-
-            prev->entry.le_next = NULL;
-            src->container.lh_last = &list_next(prev, entry);
-            elm->entry.le_prev = &list_first(&dst->container);
-            return 0;
+            dst->container.lh_first = next;
+            src->container.lh_last = &elm->entry.le_next;
+            next->entry.le_prev = &dst->container.lh_first;
         }
+        return 0;
     }
     return -1;
 }
+
+int cbor_container_slice_before(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm) {
+    if (dst
+        && src
+        && elm
+        && dst->type == src->type
+        && (dst->type == CBOR_TYPE_ARRAY
+            || dst->type == CBOR_TYPE_MAP)) {
+        assert(cbor_container_empty(dst));
+        cbor_value_t *prev = cbor_container_prev(src, elm);
+        if (prev) {
+            prev->entry.le_next = NULL;
+            dst->container.lh_first = src->container.lh_first;
+            dst->container.lh_last = &prev->entry.le_next;
+            src->container.lh_first = elm;
+            elm->entry.le_prev = &src->container.lh_first;
+            dst->container.lh_first->entry.le_prev = &dst->container.lh_first;
+        }
+        return 0;
+    }
+    return -1;
+}
+
+int cbor_container_slice(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *start, cbor_value_t *stop) {
+    if (dst
+        && src
+        && start
+        && stop
+        && dst->type == src->type
+        && (dst->type == CBOR_TYPE_ARRAY
+            || dst->type == CBOR_TYPE_MAP)) {
+        assert(cbor_container_empty(dst));
+        assert(cbor_container_distance(src, start, stop) >= 0);
+        dst->container.lh_first = start;
+        dst->container.lh_last = &stop->entry.le_next;
+        cbor_value_t *next = cbor_container_next(src, stop);
+        cbor_value_t *prev = cbor_container_prev(src, start);
+
+        if (prev) {
+            prev->entry.le_next = next;
+            if (next) {
+                next->entry.le_prev = &prev->entry.le_next;
+            } else {
+                src->container.lh_last = &prev->entry.le_next;
+            }
+        } else {
+            src->container.lh_first = next;
+            if (next) {
+                next->entry.le_prev = &src->container.lh_first;
+            } else {
+                src->container.lh_last = &src->container.lh_first;
+            }
+        }
+
+        start->entry.le_prev = &dst->container.lh_first;
+        stop->entry.le_next = NULL;
+        return 0;
+    }
+    return -1;
+}
+
+int cbor_container_distance(const cbor_value_t *container, cbor_value_t *start, cbor_value_t *stop) {
+    int i, j, k;
+    cbor_value_t *var;
+    i = 0;
+    j = k = -1;
+    list_foreach(var, &container->container, entry) {
+        if (start == var) {
+            j = i;
+        }
+        if (stop == var) {
+            k = i;
+        }
+        i++;
+    }
+    if (j < 0 || k < 0) {
+        return 0;
+    }
+    return k - j;
+}
+
 
 int cbor_map_insert(cbor_value_t *map, cbor_value_t *key, cbor_value_t *val) {
     if (!map || !key || !val) {
@@ -440,18 +483,22 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         offset++;
         if (addition < 24) {
             val->uint = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             val->uint = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             val->uint = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             val->uint = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             val->uint = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
+        } else {
+            cbor_destroy(val);
+            offset = 0;
+            val = NULL;
         }
         break;
     }
@@ -460,18 +507,22 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         offset++;
         if (addition < 24) {
             val->uint = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             val->uint = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             val->uint = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             val->uint = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             val->uint = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
+        } else {
+            cbor_destroy(val);
+            offset = 0;
+            val = NULL;
         }
         break;
     }
@@ -481,16 +532,16 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         int len = 0;
         if (addition < 24) {
             len = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             len = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             len = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             len = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             len = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
         } else if (addition == 31) { /* indefinite */
@@ -511,6 +562,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                     val = NULL;
                     offset = 0;
                     cbor_destroy(sub);
+                    sub = NULL;
                     break;
                 }
                 if (sub) {
@@ -522,6 +574,10 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             cbor_blob_append(val, &src[offset], len);
             val->blob.ptr[val->blob.length] = 0;
             offset += len;
+        } else {
+            cbor_destroy(val);
+            val = NULL;
+            offset = 0;
         }
         break;
     }
@@ -531,16 +587,16 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         int len = 0;
         if (addition < 24) {
             len = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             len = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             len = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             len = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             len = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
         } else if (addition == 31) { /* indefinite */
@@ -561,6 +617,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                     val = NULL;
                     offset = 0;
                     cbor_destroy(sub);
+                    sub = NULL;
                     break;
                 }
                 if (sub) {
@@ -581,20 +638,20 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
     }
     case CBOR_TYPE_ARRAY: {
         val = cbor_create(CBOR_TYPE_ARRAY);
-        offset++;
+        offset++;               /* array count */
         int len = 0;
         if (addition < 24) {
             len = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             len = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             len = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             len = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             len = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
         } else if (addition == 31) { /* indefinite */
@@ -605,7 +662,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                 }
                 size_t remain = *length - offset;
                 cbor_value_t *elm = cbor_loads(src + offset, &remain);
-                if (elm) {
+                if (elm && offset + remain <= *length) {
                     offset += remain;
                     cbor_container_insert_tail(val, elm);
                 } else {
@@ -621,7 +678,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             while (len > 0 && offset < *length) {
                 size_t remain = *length - offset;
                 cbor_value_t *elm = cbor_loads(src + offset, &remain);
-                if (elm) {
+                if (elm && offset + remain <= *length) {
                     offset += remain;
                     cbor_container_insert_tail(val, elm);
                     len--;
@@ -647,17 +704,18 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         int len = 0;
         if (addition < 24) {
             len = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             len = (unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             len = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) { /* uint32_t */
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             len = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) { /* uint64_t */
-            len = be64toh(*(uint32_t *)&src[offset]);
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
+            len = be64toh(*(uint64_t *)&src[offset]);
+            offset += 8;
         } else if (addition == 31) { /* indefinite */
             while (offset < *length) {
                 if (src[offset] == -1) {
@@ -666,11 +724,11 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                 }
                 size_t remain = *length - offset;
                 cbor_value_t *k = cbor_loads(src + offset, &remain);
-                if (k) {
+                if (k && offset + remain <= *length) {
                     offset += remain;
                     remain = *length - offset;
                     cbor_value_t *v = cbor_loads(src + offset, &remain);
-                    if (v && offset < *length) {
+                    if (v && offset + remain <= *length) {
                         offset += remain;
                         cbor_value_t *pair = cbor_create(CBOR__TYPE_PAIR);
                         pair->pair.key = k;
@@ -678,6 +736,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                         cbor_container_insert_tail(val, pair);
                     } else {
                         /* error */
+                        cbor_destroy(v);
                         cbor_destroy(k);
                         cbor_destroy(val);
                         val = NULL;
@@ -697,11 +756,11 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             while (len > 0 && offset < *length) {
                 size_t remain = *length - offset;
                 cbor_value_t *k = cbor_loads(src + offset, &remain);
-                if (k) {
+                if (k && offset + remain <= *length) {
                     offset += remain;
                     remain = *length - offset;
                     cbor_value_t *v = cbor_loads(src + offset, &remain);
-                    if (v && remain < *length) {
+                    if (v && offset + remain <= *length) {
                         offset += remain;
                         cbor_value_t *pair = cbor_create(CBOR__TYPE_PAIR);
                         pair->pair.key = k;
@@ -737,22 +796,22 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         offset++;
         if (addition < 24) {
             val->tag.item = addition;
-        } else if (addition == 24) { /* uint8_t */
+        } else if (addition == 24 && offset + 1 <= *length) { /* uint8_t */
             val->tag.item =(unsigned char)src[offset];
             offset++;
-        } else if (addition == 25) { /* uint16_t */
+        } else if (addition == 25 && offset + 2 <= *length) { /* uint16_t */
             val->tag.item = be16toh(*(uint16_t *)&src[offset]);
             offset += 2;
-        } else if (addition == 26) {
+        } else if (addition == 26 && offset + 4 <= *length) { /* uint32_t */
             val->tag.item = be32toh(*(uint32_t *)&src[offset]);
             offset += 4;
-        } else if (addition == 27) {
+        } else if (addition == 27 && offset + 8 <= *length) { /* uint64_t */
             val->tag.item = be64toh(*(uint64_t *)&src[offset]);
             offset += 8;
         }
         size_t remain = *length - offset;
         val->tag.content = cbor_loads(src + offset, &remain);
-        if (val->tag.content) {
+        if (val->tag.content && offset + remain <= *length) {
             offset += remain;
         } else {
             /* error */
@@ -776,11 +835,11 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             val->simple.ctrl = CBOR_SIMPLE_NONE;
         } else if (addition == 23) { /* Undefined value */
             val->simple.ctrl = CBOR_SIMPLE_UNDEF;
-        } else if (addition == 24) { /* Simple value: extension */
+        } else if (addition == 24 && offset + 1 <= *length) { /* Simple value: extension */
             /* Reserved */
             val->simple.ctrl = src[offset];
             offset++;
-        } else if (addition == 25) { /* half float */
+        } else if (addition == 25 && offset + 2 <= *length) { /* half float */
             union {
                 uint64_t u64;
                 double dbl;
@@ -805,7 +864,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             }
             val->simple.real = f64_val.dbl;
             offset += 2;
-        } else if (addition == 26) { /* float */
+        } else if (addition == 26 && offset + 4 <= *length) { /* float */
             union {
                 uint64_t u64;
                 double dbl;
@@ -829,7 +888,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             }
             val->simple.real = f64_val.dbl;
             offset += 4;
-        } else if (addition == 27) { /* double */
+        } else if (addition == 27 && offset + 8 <= *length) { /* double */
             union {
                 uint64_t u64;
                 double dbl;
@@ -1670,6 +1729,68 @@ bool cbor_array_get_boolean(const cbor_value_t *array, int idx) {
     return cbor_boolean(val);
 }
 
+int cbor_array_set_value(cbor_value_t *array, int idx, cbor_value_t *val) {
+    if (!cbor_is_array(array)) {
+        return -1;
+    }
+    if (idx >= 0) {
+        cbor_value_t *ins = cbor_array_get(array, idx);
+        if (ins == NULL) {
+            cbor_container_insert_tail(array, val);
+        } else {
+            cbor_container_insert_before(array, ins, val);
+        }
+    } else {
+        cbor_value_t *ins = cbor_array_get(array, idx);
+        if (ins == NULL) {
+            cbor_container_insert_head(array, val);
+        } else {
+            cbor_container_insert_after(array, ins, val);
+        }
+    }
+    return 0;
+}
+
+int cbor_array_set_string(cbor_value_t *array, int idx, const char *str) {
+    if (!cbor_is_array(array)) {
+        return -1;
+    }
+    cbor_value_t *val = cbor_init_string(str, -1);
+    return cbor_array_set_value(array, idx, val);
+}
+
+int cbor_array_set_integer(cbor_value_t *array, int idx, long long integer) {
+    if (!cbor_is_array(array)) {
+        return -1;
+    }
+    cbor_value_t *val = cbor_init_integer(integer);
+    return cbor_array_set_value(array, idx, val);
+}
+
+int cbor_array_set_double(cbor_value_t *array, int idx, double dbl) {
+    if (!cbor_is_array(array)) {
+        return -1;
+    }
+    cbor_value_t *val = cbor_init_double(dbl);
+    return cbor_array_set_value(array, idx, val);
+}
+
+int cbor_array_set_boolean(cbor_value_t *array, int idx, bool boolean) {
+    if (!cbor_is_array(array)) {
+        return -1;
+    }
+    cbor_value_t *val = cbor_init_boolean(boolean);
+    return cbor_array_set_value(array, idx, val);
+}
+
+int cbor_array_set_null(cbor_value_t *array, int idx) {
+    if (!cbor_is_array(array)) {
+        return -1;
+    }
+    cbor_value_t *val = cbor_init_null();
+    return cbor_array_set_value(array, idx, val);
+}
+
 cbor_value_t *cbor_duplicate(cbor_value_t *val) {
     cbor_value_t *dup;
     if (val == NULL) {
@@ -1776,4 +1897,80 @@ const char *cbor_type_str(const cbor_value_t *val) {
         return ":pair:";
     }
     return "";
+}
+
+/* ref. RFC 6901 */
+cbor_value_t *cbor_pointer_eval(cbor_value_t *container, const char *str) {
+    char buf[1024];
+    int len = 0;
+    if (*str == 0) {
+        return container;
+    }
+    if (*str != '/') {
+        return NULL;
+    }
+    buf[len++] = *str++;        /* skip '/' */
+    while (*str && *str != '/') {
+        if (str[0] == '~' && str[1] == '0') {
+            buf[len++] = '~';
+            str += 2;
+        } else if (str[0] == '~' && str[1] == '1') {
+            buf[len++] = '/';
+            str += 2;
+        } else {
+            buf[len++] = *str++;
+        }
+    }
+    buf[len] = 0;
+    if (cbor_is_map(container)) {
+        container = cbor_map_find(container, &buf[1], len - 1);
+        if (container) {
+            container = cbor_pair_value(container);
+        }
+    } else if (cbor_is_array(container)) {
+        int idx = strtol(&buf[1], NULL, 10);
+        container = cbor_array_get(container, idx);
+    } else {
+        return NULL;
+    }
+    if (*str == 0) {
+        return container;
+    } else if (container && *str == '/') {
+        return cbor_pointer_eval(container, str);
+    }
+    return NULL;
+}
+
+void cbor_value_replace(cbor_value_t *dst, cbor_value_t *src) {
+    assert(dst != NULL && src != NULL);
+    assert(dst->type != CBOR__TYPE_PAIR && src->type != CBOR__TYPE_PAIR);
+
+    if (dst->type == CBOR_TYPE_MAP || dst->type == CBOR_TYPE_ARRAY) {
+        cbor_container_clear(dst);
+    } else if (dst->type == CBOR_TYPE_STRING || dst->type == CBOR_TYPE_BYTESTRING) {
+        free(dst->blob.ptr);
+        dst->blob.ptr = NULL;
+        dst->blob.allocated = 0;
+        dst->blob.length = 0;
+    } else if (dst->type == CBOR_TYPE_TAG) {
+        cbor_destroy(dst->tag.content);
+        dst->tag.content = NULL;
+    }
+    dst->type = src->type;
+    if (src->type == CBOR_TYPE_MAP || src->type == CBOR_TYPE_ARRAY) {
+        dst->container = src->container;
+        list_init(&src->container);
+    } else if (src->type == CBOR_TYPE_STRING || src->type == CBOR_TYPE_BYTESTRING) {
+        dst->blob = src->blob;
+        memset(&src->blob, 0, sizeof(src->blob));
+    } else if (src->type == CBOR_TYPE_TAG) {
+        dst->tag = src->tag;
+        memset(&src->tag, 0, sizeof(src->tag));
+    } else if (src->type == CBOR_TYPE_SIMPLE) {
+        dst->simple = src->simple;
+    } else {
+        dst->uint = src->uint;
+    }
+    src->type = CBOR_TYPE_SIMPLE;
+    src->simple.ctrl = CBOR_SIMPLE_NULL;
 }

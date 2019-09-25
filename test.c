@@ -585,6 +585,45 @@ int test_slice() {
     printf("3. slice done\n");
 }
 
+int test_json_pointer() {
+    const char *content =
+        "{\
+      \"foo\": [\"bar\", \"baz\"],\
+      \"\": 0,\
+      \"a/b\": 1,\
+      \"c%d\": 2,\
+      \"e^f\": 3,\
+      \"g|h\": 4,\
+      \"i\\\\j\": 5,\
+      \"k\\\"l\": 6,\
+      \" \": 7,\
+      \"m~n\": 8\
+}";
+    cbor_value_t *val = cbor_json_loads(content, -1);
+    cbor_value_t *e = cbor_pointer_eval(val, "");
+    assert(val == e);
+    e = cbor_pointer_eval(val, "/foo/0");
+    assert(strcmp(cbor_string(e), "bar") == 0);
+    e = cbor_pointer_eval(val, "/");
+    assert(cbor_integer(e) == 0);
+    e = cbor_pointer_eval(val, "/a~1b");
+    assert(cbor_integer(e) == 1);
+    e = cbor_pointer_eval(val, "/c%d");
+    assert(cbor_integer(e) == 2);
+    e = cbor_pointer_eval(val, "/e^f");
+    assert(cbor_integer(e) == 3);
+    e = cbor_pointer_eval(val, "/g|h");
+    assert(cbor_integer(e) == 4);
+    e = cbor_pointer_eval(val, "/i\\j");
+    assert(cbor_integer(e) == 5);
+    e = cbor_pointer_eval(val, "/k\"l");
+    assert(cbor_integer(e) == 6);
+    e = cbor_pointer_eval(val, "/ ");
+    assert(cbor_integer(e) == 7);
+    e = cbor_pointer_eval(val, "/m~0n");
+    assert(cbor_integer(e) == 8);
+}
+
 int main(int argc, char **argv) {
     size_t length;
     for (int i = 0; content[i] != NULL; i++) {
@@ -622,5 +661,6 @@ int main(int argc, char **argv) {
     test_f64();
     test_json();
     test_slice();
+    test_json_pointer();
     return 0;
 }

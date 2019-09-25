@@ -1890,3 +1890,45 @@ const char *cbor_type_str(const cbor_value_t *val) {
     }
     return "";
 }
+
+/* ref. RFC 6901 */
+cbor_value_t *cbor_pointer_eval(cbor_value_t *container, const char *str) {
+    char buf[1024];
+    int len = 0;
+    if (*str == 0) {
+        return container;
+    }
+    if (*str != '/') {
+        return NULL;
+    }
+    buf[len++] = *str++;        /* skip '/' */
+    while (*str && *str != '/') {
+        if (str[0] == '~' && str[1] == '0') {
+            buf[len++] = '~';
+            str += 2;
+        } else if (str[0] == '~' && str[1] == '1') {
+            buf[len++] = '/';
+            str += 2;
+        } else {
+            buf[len++] = *str++;
+        }
+    }
+    buf[len] = 0;
+    if (cbor_is_map(container)) {
+        container = cbor_map_find(container, &buf[1], len - 1);
+        if (container) {
+            container = cbor_pair_value(container);
+        }
+    } else if (cbor_is_array(container)) {
+        int idx = strtol(&buf[1], NULL, 10);
+        container = cbor_array_get(container, idx);
+    } else {
+        return NULL;
+    }
+    if (*str == 0) {
+        return container;
+    } else if (container && *str == '/') {
+        return cbor_pointer_eval(container, str);
+    }
+    return NULL;
+}

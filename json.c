@@ -542,9 +542,9 @@ cbor_value_t *json_parse_number(lexer_t *lexer) {
 
     if (isprint(tail)
         && (isalpha(tail) || isdigit(tail))) {
-        /* handle nan, inf, -inf */
+        /* handle +inf, -inf */
         double dbl = strtod(ptr, &end);
-        if (isnan(dbl) || isinf(dbl)) {
+        if (isinf(dbl)) {
             lexer->linoff += (end - ptr);
             lexer->cursor = end;
             num = cbor_init_double(dbl);

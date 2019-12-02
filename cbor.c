@@ -1918,65 +1918,60 @@ const char *cbor_type_str(const cbor_value_t *val) {
     return "";
 }
 
-int pointer_compare(const char *a, const char *b) {
-    if (a == NULL || b == NULL)
-        return -1;
-    for (; *a != '\0' && *b != '\0' && *a != '/'; a++, b++) {
-        if (*a == '~') {
-            if ((a[1] == '0' && *b != '~') || (a[1] == '1' && *b != '/')) {
-                return -1;
-            }
-            a++;
-        } else if (*a != *b) {
-            return -1;
-        }
-    }
-    if ((*a == '/' || *a == '\0') && *b == '\0') {
-        return 0;
-    }
-    return -1;
-}
-
-cbor_value_t *cbor_map_pointer_get(cbor_value_t *m, const char *p) {
-    cbor_value_t *var;
-    list_foreach(var, &m->container, entry) {
-        if (!pointer_compare(p, var->pair.key->blob.ptr)) {
-            return var;
-        }
-    }
-    return NULL;
-}
-
-cbor_value_t *cbor_array_pointer_get(cbor_value_t *a, const char *p) {
-    int i;
-    int idx = 0;
-    for (i = 0; p[i] >= '0' && p[i] <= '0'; i++) {
-        idx *= 10;
-        idx += p[i] - '0';
-    }
-    return cbor_array_get(a, idx);
-}
-
 cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *str, cbor_value_t **parent) {
+    int i, l;
+    char buf[1024];
     cbor_value_t *current = container;
     if (str == NULL)
         return NULL;
     *parent = current;
     while (str[0] == '/' && current != NULL) {
         str++;
+        i = 0;
+        l = 0;
+        while (str[i] != '/' && str[i] != '\0') {
+            if (str[i] == '~') {
+                memcpy(buf + l, str, i);
+                l = i;
+                if (str[i + 1] == '0') {
+                    buf[l++] = '~';
+                } else if (str[i + 1] == '1') {
+                    buf[l++] = '/';
+                }
+                i += 2;
+            } else {
+                if (l == 0) {
+                    i++;
+                } else {
+                    buf[l++] = str[i++];
+                }
+            }
+        }
         if (current->type == CBOR__TYPE_PAIR) {
             current = current->pair.val;
         }
-        if (cbor_is_map(current)) {
-            *parent = current;
-            current = cbor_map_pointer_get(current, str);
-        } else if (cbor_is_array(current)) {
-            *parent = current;
-            current = cbor_array_pointer_get(current, str);
+        *parent = current;
+        if (l > 0) {
+            if (cbor_is_map(current)) {
+                current = cbor_map_find(current, buf, l);
+            } else if (cbor_is_array(current)) {
+                buf[l] = 0;
+                int idx = strtol(buf, NULL, 10);
+                current = cbor_array_get(current, idx);
+            } else {
+                break;
+            }
         } else {
-            break;
+            if (cbor_is_map(current)) {
+                current = cbor_map_find(current, str, i);
+            } else if (cbor_is_array(current)) {
+                int idx = strtol(str, NULL, 10);
+                current = cbor_array_get(current, idx);
+            } else {
+                break;
+            }
         }
-        while (str[0] != '\0' && str[0] != '/') str++;
+        str += i;
     }
     return current;
 }

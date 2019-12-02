@@ -32,6 +32,7 @@ int cbor_blob_append_word(cbor_value_t *val, uint16_t word);
 int cbor_blob_append_dword(cbor_value_t *val, uint32_t dword);
 int cbor_blob_append_qword(cbor_value_t *val, uint64_t qword);
 int cbor_blob_replace(cbor_value_t *val, char **str, size_t *length);
+void cbor_blob_trim(cbor_value_t *val);
 
 int cbor_container_empty(const cbor_value_t *container);
 int cbor_container_size(const cbor_value_t *container);

@@ -2,6 +2,7 @@
 #include "list.h"
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 #include <math.h>
 #include <float.h>
 #include <stdio.h>
@@ -177,6 +178,24 @@ int cbor_blob_append_qword(cbor_value_t *val, uint64_t qword) {
         return 0;
     }
     return -1;
+}
+
+void cbor_blob_trim(cbor_value_t *val) {
+    size_t t;
+    if (val->type != CBOR_TYPE_STRING) {
+        return;
+    }
+    for (t = 0; t < val->blob.length; t++) {
+        if (!isspace((unsigned char)val->blob.ptr[t])) {
+            break;
+        }
+    }
+    if (t > 0) {
+        memmove(val->blob.ptr, val->blob.ptr + t, val->blob.length - t);
+        val->blob.length -= t;
+    }
+    while (val->blob.length > 0 && isspace((unsigned char)val->blob.ptr[val->blob.length - 1]))
+        val->blob.length -= 1;
 }
 
 int cbor_container_empty(const cbor_value_t *container) {
@@ -1897,6 +1916,68 @@ const char *cbor_type_str(const cbor_value_t *val) {
         return ":pair:";
     }
     return "";
+}
+
+int pointer_compare(const char *a, const char *b) {
+    if (a == NULL || b == NULL)
+        return -1;
+    for (; *a != '\0' && *b != '\0' && *a != '/'; a++, b++) {
+        if (*a == '~') {
+            if ((a[1] == '0' && *b != '/') || (a[1] == '1' && *b != '~')) {
+                return -1;
+            }
+            a++;
+        } else if (*a != *b) {
+            return -1;
+        }
+    }
+    if ((*a == '/' || *a == '\0') && *b == '\0') {
+        return 0;
+    }
+    return -1;
+}
+
+cbor_value_t *cbor_map_pointer_get(cbor_value_t *m, const char *p) {
+    cbor_value_t *var;
+    list_foreach(var, &m->container, entry) {
+        if (!pointer_compare(p, m->pair.key->blob.ptr)) {
+            return var;
+        }
+    }
+    return NULL;
+}
+
+cbor_value_t *cbor_array_pointer_get(cbor_value_t *a, const char *p) {
+    int i;
+    int idx = 0;
+    for (i = 0; p[0] >= '0' && p[0] <= '0'; i++) {
+        idx *= 10;
+        idx += p[0] - '0';
+    }
+    return cbor_array_get(a, idx);
+}
+
+cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *str, cbor_value_t **parent) {
+    cbor_value_t *current = container;
+    if (str == NULL)
+        return NULL;
+    *parent = current;
+    while (str[0] == '/' && container != NULL) {
+        str++;
+        if (current->type == CBOR__TYPE_PAIR) {
+            current = current->pair.val;
+        }
+        if (cbor_is_map(current)) {
+            *parent = current;
+            current = cbor_map_pointer_get(current, str);
+        } else if (cbor_is_array(current)) {
+            *parent = current;
+            current = cbor_array_pointer_get(current, str);
+        } else {
+            break;
+        }
+    }
+    return current;
 }
 
 /* ref. RFC 6901 */

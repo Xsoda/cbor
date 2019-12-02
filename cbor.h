@@ -116,6 +116,7 @@ int cbor_container_slice_before(cbor_value_t *dst, cbor_value_t *src, cbor_value
 int cbor_container_distance(const cbor_value_t *container, cbor_value_t *start, cbor_value_t *stop);
 
 cbor_value_t *cbor_pointer_eval(cbor_value_t *container, const char *str);
+cbor_value_t *cbor_pointer_build(cbor_value_t *arr);
 void cbor_value_replace(cbor_value_t *dst, cbor_value_t *src);
 
 cbor_value_t *cbor_duplicate(cbor_value_t *val);

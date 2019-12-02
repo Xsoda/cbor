@@ -1923,7 +1923,7 @@ int pointer_compare(const char *a, const char *b) {
         return -1;
     for (; *a != '\0' && *b != '\0' && *a != '/'; a++, b++) {
         if (*a == '~') {
-            if ((a[1] == '0' && *b != '/') || (a[1] == '1' && *b != '~')) {
+            if ((a[1] == '0' && *b != '~') || (a[1] == '1' && *b != '/')) {
                 return -1;
             }
             a++;
@@ -1940,7 +1940,7 @@ int pointer_compare(const char *a, const char *b) {
 cbor_value_t *cbor_map_pointer_get(cbor_value_t *m, const char *p) {
     cbor_value_t *var;
     list_foreach(var, &m->container, entry) {
-        if (!pointer_compare(p, m->pair.key->blob.ptr)) {
+        if (!pointer_compare(p, var->pair.key->blob.ptr)) {
             return var;
         }
     }
@@ -1950,9 +1950,9 @@ cbor_value_t *cbor_map_pointer_get(cbor_value_t *m, const char *p) {
 cbor_value_t *cbor_array_pointer_get(cbor_value_t *a, const char *p) {
     int i;
     int idx = 0;
-    for (i = 0; p[0] >= '0' && p[0] <= '0'; i++) {
+    for (i = 0; p[i] >= '0' && p[i] <= '0'; i++) {
         idx *= 10;
-        idx += p[0] - '0';
+        idx += p[i] - '0';
     }
     return cbor_array_get(a, idx);
 }
@@ -1962,7 +1962,7 @@ cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *str, cbor_va
     if (str == NULL)
         return NULL;
     *parent = current;
-    while (str[0] == '/' && container != NULL) {
+    while (str[0] == '/' && current != NULL) {
         str++;
         if (current->type == CBOR__TYPE_PAIR) {
             current = current->pair.val;
@@ -1976,50 +1976,56 @@ cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *str, cbor_va
         } else {
             break;
         }
+        while (str[0] != '\0' && str[0] != '/') str++;
     }
     return current;
 }
 
 /* ref. RFC 6901 */
 cbor_value_t *cbor_pointer_eval(cbor_value_t *container, const char *str) {
-    char buf[1024];
-    int len = 0;
-    if (*str == 0) {
-        return container;
-    }
-    if (*str != '/') {
-        return NULL;
-    }
-    buf[len++] = *str++;        /* skip '/' */
-    while (*str && *str != '/') {
-        if (str[0] == '~' && str[1] == '0') {
-            buf[len++] = '~';
-            str += 2;
-        } else if (str[0] == '~' && str[1] == '1') {
-            buf[len++] = '/';
-            str += 2;
+    cbor_value_t *parent;
+    cbor_value_t *val = cbor_pointer_get(container, str, &parent);
+    if (val) {
+        if (val->type == CBOR__TYPE_PAIR) {
+            return cbor_pair_value(val);
         } else {
-            buf[len++] = *str++;
+            return val;
         }
-    }
-    buf[len] = 0;
-    if (cbor_is_map(container)) {
-        container = cbor_map_find(container, &buf[1], len - 1);
-        if (container) {
-            container = cbor_pair_value(container);
-        }
-    } else if (cbor_is_array(container)) {
-        int idx = strtol(&buf[1], NULL, 10);
-        container = cbor_array_get(container, idx);
-    } else {
-        return NULL;
-    }
-    if (*str == 0) {
-        return container;
-    } else if (container && *str == '/') {
-        return cbor_pointer_eval(container, str);
     }
     return NULL;
+}
+
+cbor_value_t *cbor_pointer_build(cbor_value_t *arr) {
+    cbor_value_t *node;
+    cbor_iter_t iter;
+    cbor_value_t *result = cbor_init_string("", 0);
+    cbor_iter_init(&iter, arr, CBOR_ITER_AFTER);
+    while ((node = cbor_iter_next(&iter))) {
+        cbor_blob_append_byte(result, '/');
+        if (cbor_is_string(node)) {
+            int i;
+            const char *ptr = cbor_string(node);
+            int length = cbor_string_size(node);
+            for (i = 0; i < length; i++) {
+                if (ptr[i] == '/') {
+                    cbor_blob_append_byte(result, '~');
+                    cbor_blob_append_byte(result, '1');
+                } else if (ptr[i] == '~') {
+                    cbor_blob_append_byte(result, '~');
+                    cbor_blob_append_byte(result, '0');
+                } else {
+                    cbor_blob_append_byte(result, ptr[i]);
+                }
+            }
+        } else if (cbor_is_integer(node)) {
+            cbor_blob_append_v(result, "%lld", cbor_integer(node));
+        } else {
+            cbor_destroy(result);
+            result = NULL;
+            break;
+        }
+    }
+    return result;
 }
 
 void cbor_value_replace(cbor_value_t *dst, cbor_value_t *src) {

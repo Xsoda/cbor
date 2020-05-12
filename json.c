@@ -42,6 +42,7 @@ typedef struct lexer_s {
     int linoff;
 } lexer_t;
 
+extern int cbor_blob_replace(cbor_value_t *val, char **str, size_t *length);
 cbor_value_t *json_parse_string(lexer_t *lexer);
 cbor_value_t *json_parse_value(lexer_t *lexer);
 
@@ -750,6 +751,7 @@ cbor_value_t *cbor_json_loadss(const void *src, size_t *size) {
 }
 
 void json__dumps(const cbor_value_t *src, int indent, const char *space, int length, cbor_value_t *dst) {
+    int i;
     char buffer[1024];
     cbor_value_t *val;
     if (cbor_is_integer(src)) {
@@ -760,7 +762,7 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
         const char *ptr = cbor_string(src);
         int length = cbor_string_size(src);
 
-        for (int i = 0; i < length; i++) {
+        for (i = 0; i < length; i++) {
             switch ((unsigned char)ptr[i]) {
             case '\n':
                 cbor_blob_append_byte(dst, '\\');
@@ -893,7 +895,7 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
              val != NULL;
              val = cbor_container_next(src, val)) {
             if (space) {
-                for (int i = 0; i < indent; i++) {
+                for (i = 0; i < indent; i++) {
                     cbor_blob_append(dst, space, length);
                 }
             }
@@ -910,7 +912,7 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
         }
         indent--;
         if (space) {
-            for (int i = 0; i < indent; i++) {
+            for (i = 0; i < indent; i++) {
                 cbor_blob_append(dst, space, length);
             }
         }
@@ -925,7 +927,7 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
              val != NULL;
              val = cbor_container_next(src, val)) {
             if (space) {
-                for (int i = 0; i < indent; i++) {
+                for (i = 0; i < indent; i++) {
                     cbor_blob_append(dst, space, length);
                 }
             }
@@ -945,13 +947,18 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
         }
         indent--;
         if (space) {
-            for (int i = 0; i < indent; i++) {
+            for (i = 0; i < indent; i++) {
                 cbor_blob_append(dst, space, length);
             }
         }
         cbor_blob_append_byte(dst, '}');
     } else if (cbor_is_double(src)) {
-        int len = snprintf(buffer, sizeof(buffer), "%lf", cbor_real(src));
+        int len;
+        if (isinf(cbor_real(src)) || isnan(cbor_real(src))) {
+            len = snprintf(buffer, sizeof(buffer), "%lf", .0);
+        } else {
+            len = snprintf(buffer, sizeof(buffer), "%lf", cbor_real(src));
+        }
         cbor_blob_append(dst, buffer, len);
     } else if (cbor_is_null(src)) {
         cbor_blob_append(dst, "null", 4);

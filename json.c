@@ -55,6 +55,9 @@ static void lexer_skip_block_comment(lexer_t *lexer) {
                 lexer->linoff += 2;
                 lexer->cursor += 2;
                 break;
+            } else {
+                lexer->linoff++;
+                lexer->cursor++;
             }
         } else if (ch == '/' && lexer->cursor + 2 < lexer->eof) {
             int next = (unsigned char)lexer->cursor[1];

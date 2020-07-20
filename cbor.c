@@ -1770,6 +1770,17 @@ int cbor_array_set_value(cbor_value_t *array, int idx, cbor_value_t *val) {
     return 0;
 }
 
+cbor_value_t *cbor_array_remove(cbor_value_t *array, int idx) {
+    if (cbor_is_array(array)) {
+        cbor_value_t *item = cbor_array_get(array, idx);
+        if (item) {
+            cbor_container_remove(array, item);
+            return item;
+        }
+    }
+    return NULL;
+}
+
 int cbor_array_set_string(cbor_value_t *array, int idx, const char *str) {
     if (!cbor_is_array(array)) {
         return -1;
@@ -2023,36 +2034,110 @@ cbor_value_t *cbor_pointer_build(cbor_value_t *arr) {
     return result;
 }
 
+cbor_value_t *cbor_pointer_split(const char *str) {
+    int i, l, cnt;
+    char buf[1024];
+    cbor_value_t *result = cbor_init_array();
+    while (str && str[0] == '/') {
+        str++;
+        i = 0;
+        l = 0;
+        cnt = 0;
+        while (str[i] != '/' && str[i] != '\0') {
+            if (str[i] == '~' && str[i + 1] == '0') {
+                buf[l++] = '~';
+                i += 2;
+            } else if (str[i] == '~' && str[i + 1] == '1') {
+                buf[l++] = '/';
+                i += 2;
+            } else {
+                if (isdigit((unsigned char)str[i])) {
+                    cnt++;
+                }
+                buf[l++] = str[i++];
+            }
+        }
+        buf[l] = 0;
+        if (cnt == l) {
+            long idx = strtol(buf, NULL, 10);
+            cbor_array_set_integer(result, -1, idx);
+        } else {
+            cbor_array_set_string(result, -1, buf);
+        }
+        if (str[0] == '\0') {
+            break;
+        }
+    }
+    return result;
+}
+
 void cbor_value_replace(cbor_value_t *dst, cbor_value_t *src) {
     assert(dst != NULL && src != NULL);
     assert(dst->type != CBOR__TYPE_PAIR && src->type != CBOR__TYPE_PAIR);
+    assert(dst != src);
 
-    if (dst->type == CBOR_TYPE_MAP || dst->type == CBOR_TYPE_ARRAY) {
-        cbor_container_clear(dst);
-    } else if (dst->type == CBOR_TYPE_STRING || dst->type == CBOR_TYPE_BYTESTRING) {
-        free(dst->blob.ptr);
-        dst->blob.ptr = NULL;
-        dst->blob.allocated = 0;
-        dst->blob.length = 0;
-    } else if (dst->type == CBOR_TYPE_TAG) {
-        cbor_destroy(dst->tag.content);
-        dst->tag.content = NULL;
+    if (cbor_include_test(dst, src) || cbor_include_test(src, dst)) {
+        assert(("cbor value structure error", 0));
+        return;
     }
-    dst->type = src->type;
-    if (src->type == CBOR_TYPE_MAP || src->type == CBOR_TYPE_ARRAY) {
-        dst->container = src->container;
-        list_init(&src->container);
+    cbor_container_clear(dst);
+    if (cbor_is_string(dst)) {
+        free(dst->blob.ptr);
+    } else if (cbor_is_tag(dst)) {
+        cbor_destroy(cbor_tag_get_content(dst));
+    }
+    dst->type = CBOR_TYPE_SIMPLE;
+    dst->simple.ctrl = CBOR_SIMPLE_NULL;
+
+    if (src->type == CBOR_TYPE_ARRAY || src->type == CBOR_TYPE_MAP) {
+        dst->type = src->type;
+        list_init(&dst->container);
+        cbor_container_concat(dst, src);
     } else if (src->type == CBOR_TYPE_STRING || src->type == CBOR_TYPE_BYTESTRING) {
-        dst->blob = src->blob;
-        memset(&src->blob, 0, sizeof(src->blob));
+        dst->type = src->type;
+        dst->blob.ptr = (char *)malloc(32);
+        dst->blob.allocated = 32;
+        dst->blob.length = 0;
+        cbor_blob_append(dst, cbor_string(src), cbor_string_size(src));
     } else if (src->type == CBOR_TYPE_TAG) {
-        dst->tag = src->tag;
-        memset(&src->tag, 0, sizeof(src->tag));
+        dst->type = CBOR_TYPE_TAG;
+        cbor_tag_set(dst, cbor_tag_get_item(src), cbor_duplicate(cbor_tag_get_content(src)));
     } else if (src->type == CBOR_TYPE_SIMPLE) {
+        dst->type = CBOR_TYPE_SIMPLE;
         dst->simple = src->simple;
-    } else {
+    } else if (src->type == CBOR_TYPE_UINT || src->type == CBOR_TYPE_NEGINT) {
+        dst->type = src->type;
         dst->uint = src->uint;
     }
-    src->type = CBOR_TYPE_SIMPLE;
-    src->simple.ctrl = CBOR_SIMPLE_NULL;
+}
+
+bool cbor_include_test(const cbor_value_t *parent, const cbor_value_t *child) {
+    cbor_iter_t iter;
+    cbor_value_t *ele;
+
+    if (parent == NULL || child == NULL) {
+        return false;
+    }
+    if (cbor_is_map(parent)) {
+        cbor_iter_init(&iter, parent, CBOR_ITER_AFTER);
+        while ((ele = cbor_iter_next(&iter)) != NULL) {
+            if (cbor_pair_key(ele) == child || cbor_pair_value(ele) == child) {
+                return true;
+            }
+            if (cbor_include_test(cbor_pair_key(ele), child)
+                || cbor_include_test(cbor_pair_value(ele), child)) {
+                return true;
+            }
+        }
+    } else if (cbor_is_array(parent)) {
+        cbor_iter_init(&iter, parent, CBOR_ITER_AFTER);
+        while ((ele = cbor_iter_next(&iter)) != NULL) {
+            if (ele == child || cbor_include_test(ele, child)) {
+                return true;
+            }
+        }
+    } else if (cbor_is_tag(parent)) {
+        return cbor_include_test(parent->tag.content, child);
+    }
+    return false;
 }

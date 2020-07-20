@@ -66,6 +66,8 @@ long long cbor_array_get_integer(const cbor_value_t *array, int idx);
 double cbor_array_get_double(const cbor_value_t *array, int idx);
 bool cbor_array_get_boolean(const cbor_value_t *array, int idx);
 
+cbor_value_t *cbor_array_remove(cbor_value_t *array, int idx);
+
 int cbor_array_set_value(cbor_value_t *array, int idx, cbor_value_t *val);
 int cbor_array_set_string(cbor_value_t *array, int idx, const char *str);
 int cbor_array_set_integer(cbor_value_t *array, int idx, long long integer);
@@ -89,6 +91,7 @@ bool cbor_is_array(const cbor_value_t *val);
 bool cbor_is_tag(const cbor_value_t *val);
 bool cbor_is_null(const cbor_value_t *val);
 bool cbor_is_number(const cbor_value_t *val);
+bool cbor_include_test(const cbor_value_t *parent, const cbor_value_t *child);
 
 cbor_value_t *cbor_pair_key(const cbor_value_t *val);
 cbor_value_t *cbor_pair_value(const cbor_value_t *val);
@@ -116,6 +119,8 @@ int cbor_container_distance(const cbor_value_t *container, cbor_value_t *start, 
 
 cbor_value_t *cbor_pointer_eval(cbor_value_t *container, const char *str);
 cbor_value_t *cbor_pointer_build(cbor_value_t *arr);
+cbor_value_t *cbor_pointer_split(const char *str);
+
 void cbor_value_replace(cbor_value_t *dst, cbor_value_t *src);
 
 cbor_value_t *cbor_duplicate(cbor_value_t *val);

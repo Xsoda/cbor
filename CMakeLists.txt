@@ -4,6 +4,7 @@ project(cbor C)
 
 set(CBOR_SRC
   cbor.c
+  pointer.c
   json.c)
 
 

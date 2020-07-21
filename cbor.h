@@ -91,10 +91,12 @@ bool cbor_is_array(const cbor_value_t *val);
 bool cbor_is_tag(const cbor_value_t *val);
 bool cbor_is_null(const cbor_value_t *val);
 bool cbor_is_number(const cbor_value_t *val);
-bool cbor_include_test(const cbor_value_t *parent, const cbor_value_t *child);
 
 cbor_value_t *cbor_pair_key(const cbor_value_t *val);
 cbor_value_t *cbor_pair_value(const cbor_value_t *val);
+int cbor_pair_set_key(cbor_value_t *val, const char *key);
+int cbor_pair_set_value(cbor_value_t *val, cbor_value_t *value);
+cbor_value_t *cbor_pair_remove_value(cbor_value_t *val);
 
 cbor_value_t *cbor_init_boolean(bool b);
 cbor_value_t *cbor_init_null();
@@ -120,8 +122,6 @@ int cbor_container_distance(const cbor_value_t *container, cbor_value_t *start, 
 cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *str);
 cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *str, cbor_value_t *value);
 cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *str);
-
-void cbor_value_replace(cbor_value_t *dst, cbor_value_t *src);
 
 cbor_value_t *cbor_duplicate(cbor_value_t *val);
 

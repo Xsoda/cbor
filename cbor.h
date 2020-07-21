@@ -117,9 +117,9 @@ int cbor_container_slice_after(cbor_value_t *dst, cbor_value_t *src, cbor_value_
 int cbor_container_slice_before(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm);
 int cbor_container_distance(const cbor_value_t *container, cbor_value_t *start, cbor_value_t *stop);
 
-cbor_value_t *cbor_pointer_eval(cbor_value_t *container, const char *str);
-cbor_value_t *cbor_pointer_build(cbor_value_t *arr);
-cbor_value_t *cbor_pointer_split(const char *str);
+cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *str);
+cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *str, cbor_value_t *value);
+cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *str);
 
 void cbor_value_replace(cbor_value_t *dst, cbor_value_t *src);
 
@@ -142,6 +142,10 @@ cbor_value_t *cbor_json_loadss(const void *src, size_t *size);
 
 cbor_value_t *cbor_json_loadf(const char *path);
 int cbor_json_dumpf(cbor_value_t *val, const char *path, bool pretty);
+
+cbor_value_t *cbor_string_split(const char *str, const char *f);
+cbor_value_t *cbor_string_join(cbor_value_t *array, const char *join);
+int cbor_string_replace(cbor_value_t *str, const char *find, const char *replace);
 
 #ifdef __cplusplus
 }

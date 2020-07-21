@@ -7,6 +7,7 @@
 #include <float.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include "fastsearch.h"
 
 /* Major Types */
 typedef enum {
@@ -1929,146 +1930,163 @@ const char *cbor_type_str(const cbor_value_t *val) {
     return "";
 }
 
-cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *str, cbor_value_t **parent) {
-    int i, l;
-    char buf[1024];
-    cbor_value_t *current = container;
-    if (str == NULL)
-        return NULL;
-    *parent = current;
-    while (str[0] == '/' && current != NULL) {
-        str++;
-        i = 0;
-        l = 0;
-        while (str[i] != '/' && str[i] != '\0') {
-            if (str[i] == '~') {
-                memcpy(buf + l, str, i);
-                l = i;
-                if (str[i + 1] == '0') {
-                    buf[l++] = '~';
-                } else if (str[i + 1] == '1') {
-                    buf[l++] = '/';
-                }
-                i += 2;
-            } else {
-                if (l == 0) {
-                    i++;
-                } else {
-                    buf[l++] = str[i++];
-                }
-            }
-        }
-        if (current->type == CBOR__TYPE_PAIR) {
-            current = current->pair.val;
-        }
-        *parent = current;
-        if (l > 0) {
-            if (cbor_is_map(current)) {
-                current = cbor_map_find(current, buf, l);
-            } else if (cbor_is_array(current)) {
-                buf[l] = 0;
-                int idx = strtol(buf, NULL, 10);
-                current = cbor_array_get(current, idx);
-            } else {
-                break;
-            }
+cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *str) {
+    cbor_iter_t iter;
+    cbor_value_t *ele;
+    cbor_value_t *current = NULL;
+    cbor_value_t *split = cbor_string_split(str, "/");
+
+    cbor_iter_init(&iter, split, CBOR_ITER_AFTER);
+    while ((ele = cbor_iter_next(&iter)) != NULL) {
+        cbor_string_replace(ele, "~1", "/");
+        cbor_string_replace(ele, "~0", "~");
+
+        if (cbor_string_size(ele) == 0 && cbor_container_prev(split, ele) == NULL) {
+            current = container;
         } else {
+            if (current == NULL)
+                break;
             if (cbor_is_map(current)) {
-                current = cbor_map_find(current, str, i);
+                cbor_value_t *find = cbor_map_find(current, cbor_string(ele), cbor_string_size(ele));
+                if (find) {
+                    current = cbor_pair_value(find);
+                } else {
+                    current = NULL;
+                    break;
+                }
             } else if (cbor_is_array(current)) {
-                int idx = strtol(str, NULL, 10);
-                current = cbor_array_get(current, idx);
+                char *end;
+                int idx = strtol(cbor_string(ele), &end, 10);
+                if (*end == '\0') {
+                    current = cbor_array_get(current, idx);
+                } else {
+                    current = NULL;
+                    break;
+                }
             } else {
+                current = NULL;
                 break;
             }
         }
-        str += i;
     }
+    cbor_destroy(split);
     return current;
 }
 
-/* ref. RFC 6901 */
-cbor_value_t *cbor_pointer_eval(cbor_value_t *container, const char *str) {
-    cbor_value_t *parent;
-    cbor_value_t *val = cbor_pointer_get(container, str, &parent);
-    if (val) {
-        if (val->type == CBOR__TYPE_PAIR) {
-            return cbor_pair_value(val);
-        } else {
-            return val;
-        }
-    }
-    return NULL;
-}
-
-cbor_value_t *cbor_pointer_build(cbor_value_t *arr) {
-    cbor_value_t *node;
+cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *str) {
     cbor_iter_t iter;
-    cbor_value_t *result = cbor_init_string("", 0);
-    cbor_iter_init(&iter, arr, CBOR_ITER_AFTER);
-    while ((node = cbor_iter_next(&iter))) {
-        cbor_blob_append_byte(result, '/');
-        if (cbor_is_string(node)) {
-            int i;
-            const char *ptr = cbor_string(node);
-            int length = cbor_string_size(node);
-            for (i = 0; i < length; i++) {
-                if (ptr[i] == '/') {
-                    cbor_blob_append_byte(result, '~');
-                    cbor_blob_append_byte(result, '1');
-                } else if (ptr[i] == '~') {
-                    cbor_blob_append_byte(result, '~');
-                    cbor_blob_append_byte(result, '0');
-                } else {
-                    cbor_blob_append_byte(result, ptr[i]);
-                }
-            }
-        } else if (cbor_is_integer(node)) {
-            cbor_blob_append_v(result, "%lld", cbor_integer(node));
+    cbor_value_t *ele;
+    bool remove = false;
+    cbor_value_t *current = NULL;
+    cbor_value_t *split = cbor_string_split(str, "/");
+
+    cbor_iter_init(&iter, split, CBOR_ITER_AFTER);
+    while ((ele = cbor_iter_next(&iter)) != NULL) {
+        cbor_string_replace(ele, "~1", "/");
+        cbor_string_replace(ele, "~0", "~");
+
+        if (cbor_container_next(split, ele) == NULL) {
+            remove = true;
+        }
+
+        if (cbor_string_size(ele) == 0 && cbor_container_prev(split, ele) == NULL) {
+            current = container;
         } else {
-            cbor_destroy(result);
-            result = NULL;
-            break;
+            if (current == NULL)
+                break;
+            if (cbor_is_map(current)) {
+                cbor_value_t *find = cbor_map_find(current, cbor_string(ele), cbor_string_size(ele));
+                if (find) {
+                    if (remove) {
+                        cbor_container_remove(current, find);
+                        current = find->pair.val;
+                        find->pair.val = NULL;
+                        cbor_destroy(find);
+                    } else {
+                        current = cbor_pair_value(find);
+                    }
+                } else {
+                    current = NULL;
+                    break;
+                }
+            } else if (cbor_is_array(current)) {
+                char *end;
+                int idx = strtol(cbor_string(ele), &end, 10);
+                if (*end == '\0') {
+                    if (remove) {
+                        cbor_value_t *tmp = current;
+                        current = cbor_array_get(current, idx);
+                        cbor_container_remove(tmp, current);
+                    } else {
+                        current = cbor_array_get(current, idx);
+                    }
+                } else {
+                    current = NULL;
+                    break;
+                }
+            } else {
+                current = NULL;
+                break;
+            }
         }
     }
-    return result;
+    cbor_destroy(split);
+    return current;
 }
 
-cbor_value_t *cbor_pointer_split(const char *str) {
-    int i, l, cnt;
-    char buf[1024];
-    cbor_value_t *result = cbor_init_array();
-    while (str && str[0] == '/') {
-        str++;
-        i = 0;
-        l = 0;
-        cnt = 0;
-        while (str[i] != '/' && str[i] != '\0') {
-            if (str[i] == '~' && str[i + 1] == '0') {
-                buf[l++] = '~';
-                i += 2;
-            } else if (str[i] == '~' && str[i + 1] == '1') {
-                buf[l++] = '/';
-                i += 2;
-            } else {
-                if (isdigit((unsigned char)str[i])) {
-                    cnt++;
+cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *str, cbor_value_t *value) {
+    cbor_iter_t iter;
+    cbor_value_t *ele;
+    bool last = false;
+    cbor_value_t *current = NULL;
+    cbor_value_t *split = cbor_string_split(str, "/");
+
+    cbor_iter_init(&iter, split, CBOR_ITER_AFTER);
+    while ((ele = cbor_iter_next(&iter)) != NULL) {
+        cbor_string_replace(ele, "~1", "/");
+        cbor_string_replace(ele, "~0", "~");
+
+        if (cbor_container_next(split, ele) == NULL) {
+            last = true;
+        }
+
+        if (cbor_string_size(ele) == 0 && cbor_container_prev(split, ele) == NULL) {
+            current = container;
+        } else {
+            if (current == NULL) {
+                break;
+            }
+            if (cbor_is_map(current)) {
+                cbor_value_t *find = cbor_map_find(current, cbor_string(ele), cbor_string_size(ele));
+                if (find) {
+                    if (last) {
+                        cbor_destroy(find->pair.val);
+                        find->pair.val = value;
+                    } else {
+                        current = cbor_pair_value(find);
+                    }
+                } else {
+                    current = NULL;
+                    break;
                 }
-                buf[l++] = str[i++];
+            } else if (cbor_is_array(current)) {
+                char *end;
+                int idx = strtol(cbor_string(ele), &end, 10);
+                if (*end == '\0') {
+                    if (last) {
+                        cbor_array_set_value(current, idx, value);
+                    } else {
+                        current = cbor_array_get(current, idx);
+                    }
+                }
+            } else {
+                current = NULL;
+                break;
             }
         }
-        buf[l] = 0;
-        if (cnt == l) {
-            long idx = strtol(buf, NULL, 10);
-            cbor_array_set_integer(result, -1, idx);
-        } else {
-            cbor_array_set_string(result, -1, buf);
-        }
-        if (str[0] == '\0') {
-            break;
-        }
     }
-    return result;
+    cbor_destroy(split);
+    return current;
 }
 
 void cbor_value_replace(cbor_value_t *dst, cbor_value_t *src) {
@@ -2111,6 +2129,14 @@ void cbor_value_replace(cbor_value_t *dst, cbor_value_t *src) {
     }
 }
 
+void cbor_value_swap(cbor_value_t *a, cbor_value_t *b) {
+    cbor_value_t tmp = *b;
+    *b = *a;
+    b->entry = tmp.entry;
+    tmp.entry = a->entry;
+    *a = tmp;
+}
+
 bool cbor_include_test(const cbor_value_t *parent, const cbor_value_t *child) {
     cbor_iter_t iter;
     cbor_value_t *ele;
@@ -2140,4 +2166,80 @@ bool cbor_include_test(const cbor_value_t *parent, const cbor_value_t *child) {
         return cbor_include_test(parent->tag.content, child);
     }
     return false;
+}
+
+cbor_value_t *cbor_string_split(const char *str, const char *f) {
+    if (!str || !f) {
+        return NULL;
+    }
+
+    int l = strlen(str);
+    int m = strlen(f);
+
+    int size;
+    int offset = 0;
+    cbor_value_t *result = cbor_init_array();
+    do {
+        size = FASTSEARCH(str + offset, l - offset, f, m, -1, FAST_SEARCH);
+        if (size >= 0) {
+            cbor_value_t *s = cbor_init_string(str + offset, size);
+            offset += size;
+            offset += m;
+            cbor_container_insert_tail(result, s);
+        }
+    } while (size >= 0);
+
+    if (offset <= l) {
+        cbor_value_t *s = cbor_init_string(str + offset, l - offset);
+        cbor_container_insert_tail(result, s);
+    }
+
+    return result;
+}
+
+cbor_value_t *cbor_string_join(cbor_value_t *array, const char *str) {
+    if (cbor_is_array(array) && str) {
+        cbor_iter_t iter;
+        cbor_value_t *ele;
+        int len = strlen(str);
+        cbor_value_t *result = cbor_init_string("", 0);
+        cbor_iter_init(&iter, array, CBOR_ITER_AFTER);
+        while ((ele = cbor_iter_next(&iter)) != NULL) {
+            if (cbor_is_string(ele)) {
+                cbor_blob_append(result, cbor_string(ele), cbor_string_size(ele));
+            }
+            cbor_blob_append(result, str, len);
+        }
+        return result;
+    }
+    return NULL;
+}
+
+int cbor_string_replace(cbor_value_t *str, const char *find, const char *repl) {
+    int l, m, off, size;
+    if (!cbor_is_string(str) || !find || !repl) {
+        return -1;
+    }
+
+    l = strlen(find);
+    m = strlen(repl);
+
+    off = 0;
+    do {
+        size = FASTSEARCH(str->blob.ptr + off, str->blob.length - off, find, l, -1, FAST_SEARCH);
+        if (size >= 0) {
+            if (cbor_blob_avalible(str, m)) {
+                memmove(str->blob.ptr + off + size + m,
+                        str->blob.ptr + off + size + l,
+                        str->blob.length - off - size - l);
+                memcpy(str->blob.ptr + off + size, repl, m);
+                str->blob.length += m;
+                str->blob.length -= l;
+                str->blob.ptr[str->blob.length] = 0;
+                off += size;
+                off += m;
+            }
+        }
+    } while (size >= 0);
+    return cbor_string_size(str);
 }

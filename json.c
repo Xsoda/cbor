@@ -1014,9 +1014,9 @@ cbor_value_t *cbor_json_loadf(const char *path) {
 }
 
 int cbor_json_dumpf(cbor_value_t *val, const char *path, bool pretty) {
-    int r;
     FILE *fp;
     size_t length;
+    int r = -1;
     char *content = cbor_json_dumps(val, &length, pretty);
     if (content && length) {
         fp = fopen(path, "w");

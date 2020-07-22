@@ -1,5 +1,4 @@
 #include "cbor.h"
-#include "list.h"
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
@@ -7,57 +6,9 @@
 #include <float.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include "define.h"
 #include "fastsearch.h"
 
-/* Major Types */
-typedef enum {
-    CBOR_TYPE_UINT = 0,
-    CBOR_TYPE_NEGINT,
-    CBOR_TYPE_BYTESTRING,
-    CBOR_TYPE_STRING,
-    CBOR_TYPE_ARRAY,
-    CBOR_TYPE_MAP,
-    CBOR_TYPE_TAG,
-    CBOR_TYPE_SIMPLE,
-
-    CBOR__TYPE_PAIR,
-} cbor_type;
-
-typedef enum {
-    CBOR_SIMPLE_NONE = 0,
-    CBOR_SIMPLE_FALSE = 20,
-    CBOR_SIMPLE_TRUE = 21,
-    CBOR_SIMPLE_NULL = 22,
-    CBOR_SIMPLE_UNDEF = 23,
-    CBOR_SIMPLE_EXTENSION = 24,
-    CBOR_SIMPLE_REAL = 25,
-} cbor_simple;
-
-struct _cbor_value {
-    cbor_type type;
-    union {
-        struct {
-            size_t allocated;
-            size_t length;
-            char *ptr;
-        } blob;
-        struct {
-            struct _cbor_value *key;
-            struct _cbor_value *val;
-        } pair;
-        struct {
-            unsigned long long item;
-            struct _cbor_value *content;
-        } tag;
-        struct {
-            double real;
-            cbor_simple ctrl;
-        } simple;
-        unsigned long long uint;
-        list_head(_cbor_cname, _cbor_value) container;
-    };
-    list_entry(_cbor_value) entry;
-};
 
 cbor_value_t *cbor_create(cbor_type type) {
     cbor_value_t *val = (cbor_value_t *)malloc(sizeof(cbor_value_t));
@@ -150,6 +101,7 @@ int cbor_blob_append_byte(cbor_value_t *val, uint8_t byte) {
         int length = val->blob.length;
         val->blob.ptr[length] = byte;
         val->blob.length += 1;
+        val->blob.ptr[val->blob.length] = 0;
         return 0;
     }
     return -1;
@@ -159,6 +111,7 @@ int cbor_blob_append_word(cbor_value_t *val, uint16_t word) {
     if (cbor_blob_avalible(val, 2) > 2) {
         *(uint16_t *)&val->blob.ptr[val->blob.length] = htobe16(word);
         val->blob.length += 2;
+        val->blob.ptr[val->blob.length] = 0;
         return 0;
     }
     return -1;
@@ -168,6 +121,7 @@ int cbor_blob_append_dword(cbor_value_t *val, uint32_t dword) {
     if (cbor_blob_avalible(val, 4) > 4) {
         *(uint32_t *)&val->blob.ptr[val->blob.length] = htobe32(dword);
         val->blob.length += 4;
+        val->blob.ptr[val->blob.length] = 0;
         return 0;
     }
     return -1;
@@ -177,6 +131,7 @@ int cbor_blob_append_qword(cbor_value_t *val, uint64_t qword) {
     if (cbor_blob_avalible(val, 8) > 8) {
         *(uint64_t *)&val->blob.ptr[val->blob.length] = htobe64(qword);
         val->blob.length += 8;
+        val->blob.ptr[val->blob.length] = 0;
         return 0;
     }
     return -1;
@@ -184,7 +139,7 @@ int cbor_blob_append_qword(cbor_value_t *val, uint64_t qword) {
 
 void cbor_blob_trim(cbor_value_t *val) {
     size_t t;
-    if (val->type != CBOR_TYPE_STRING) {
+    if (val == NULL || val->type != CBOR_TYPE_STRING) {
         return;
     }
     for (t = 0; t < val->blob.length; t++) {
@@ -198,6 +153,7 @@ void cbor_blob_trim(cbor_value_t *val) {
     }
     while (val->blob.length > 0 && isspace((unsigned char)val->blob.ptr[val->blob.length - 1]))
         val->blob.length -= 1;
+    val->blob.ptr[val->blob.length] = 0;
 }
 
 int cbor_container_empty(const cbor_value_t *container) {
@@ -1890,52 +1846,6 @@ cbor_value_t *cbor_pair_value(const cbor_value_t *val) {
         return val->pair.val;
     }
     return NULL;
-}
-
-cbor_value_t *cbor_pair_remove_value(cbor_value_t *val) {
-    if (val && val->type == CBOR__TYPE_PAIR) {
-        cbor_value_t *var = val->pair.val;
-        val->pair.val = cbor_init_null();
-        return var;
-    }
-    return NULL;
-}
-
-int cbor_pair_set_key(cbor_value_t *val, const char *key) {
-    if (val && val->type == CBOR__TYPE_PAIR) {
-        cbor_value_t *k = cbor_init_string(key, -1);
-        cbor_destroy(val->pair.key);
-        val->pair.key = k;
-        return 0;
-    }
-    return -1;
-}
-
-int cbor_pair_set_value(cbor_value_t *val, cbor_value_t *value) {
-    if (val && val->type == CBOR__TYPE_PAIR) {
-        assert(value->entry.le_next == NULL && value->entry.le_prev == NULL);
-        assert(val->pair.val != value);
-        cbor_destroy(val->pair.val);
-        val->pair.val = value;
-        return 0;
-    }
-    return -1;
-}
-
-int cbor_blob_replace(cbor_value_t *val, char **str, size_t *length) {
-    if (val && (val->type == CBOR_TYPE_STRING || val->type == CBOR_TYPE_BYTESTRING)) {
-        char *ptmp = val->blob.ptr;
-        size_t stmp = val->blob.length;
-
-        val->blob.ptr = *str;
-        val->blob.length = *length;
-        val->blob.allocated = *length;
-
-        *str = ptmp;
-        *length = stmp;
-        return 0;
-    }
-    return -1;
 }
 
 const char *cbor_type_str(const cbor_value_t *val) {

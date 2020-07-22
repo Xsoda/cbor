@@ -1,4 +1,5 @@
 #include "cbor.h"
+#include "define.h"
 #include <string.h>
 
 /* return: destination value */
@@ -68,7 +69,8 @@ cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *path) {
                 if (find) {
                     if (last) {
                         cbor_container_remove(current, find);
-                        current = cbor_pair_remove_value(find);
+                        current = find->pair.val;
+                        find->pair.val = NULL;
                         cbor_destroy(find);
                     } else {
                         current = cbor_pair_value(find);
@@ -112,6 +114,11 @@ cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_v
     cbor_value_t *ele;
     bool last = false;
     cbor_value_t *current = NULL;
+
+    if (value == NULL) {
+        return NULL;
+    }
+
     cbor_value_t *split = cbor_string_split(path, "/");
 
     cbor_iter_init(&iter, split, CBOR_ITER_AFTER);
@@ -130,7 +137,8 @@ cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_v
                 cbor_value_t *find = cbor_map_find(current, cbor_string(ele), cbor_string_size(ele));
                 if (find) {
                     if (last) {
-                        cbor_pair_set_value(find, value);
+                        cbor_destroy(find->pair.val);
+                        find->pair.val = value;
                     } else {
                         current = cbor_pair_value(find);
                     }
@@ -174,7 +182,13 @@ cbor_value_t *cbor_pointer_replace(cbor_value_t *container, const char *path, cb
     cbor_value_t *ele;
     bool last = false;
     cbor_value_t *current = NULL;
+
+    if (value == NULL) {
+        return NULL;
+    }
+
     cbor_value_t *split = cbor_string_split(path, "/");
+
 
     cbor_iter_init(&iter, split, CBOR_ITER_AFTER);
     while ((ele = cbor_iter_next(&iter)) != NULL) {
@@ -192,7 +206,8 @@ cbor_value_t *cbor_pointer_replace(cbor_value_t *container, const char *path, cb
                 cbor_value_t *find = cbor_map_find(current, cbor_string(ele), cbor_string_size(ele));
                 if (find) {
                     if (last) {
-                        cbor_pair_set_value(find, value);
+                        cbor_destroy(find->pair.val);
+                        find->pair.val = value;
                     } else {
                         current = cbor_pair_value(find);
                     }
@@ -324,11 +339,13 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                     if (last) {
                         cbor_container_remove(root, value);
                         if (cbor_is_map(root)) {
-                            cbor_value_t *tmp = cbor_pair_remove_value(value);
+                            cbor_value_t *tmp = value->pair.val;
+                            value->pair.val = NULL;
                             cbor_destroy(value);
                             value = tmp;
                         }
-                        cbor_pair_set_value(find, value);
+                        cbor_destroy(find->pair.val);
+                        find->pair.val = value;
                     } else {
                         current = cbor_pair_value(find);
 
@@ -342,7 +359,8 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                     if (last) {
                         cbor_container_remove(root, value);
                         if (cbor_is_map(root)) {
-                            cbor_value_t *tmp = cbor_pair_remove_value(value);
+                            cbor_value_t *tmp = value->pair.val;
+                            value->pair.val = NULL;
                             cbor_destroy(value);
                             value = tmp;
                         }
@@ -355,7 +373,8 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                     if (last) {
                         cbor_container_remove(root, value);
                         if (cbor_is_map(root)) {
-                            cbor_value_t *tmp = cbor_pair_remove_value(value);
+                            cbor_value_t *tmp = value->pair.val;
+                            value->pair.val = NULL;
                             cbor_destroy(value);
                             value = tmp;
                         }
@@ -375,7 +394,8 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                         if (last) {
                             cbor_container_remove(root, value);
                             if (cbor_is_map(root)) {
-                                cbor_value_t *tmp = cbor_pair_remove_value(value);
+                                cbor_value_t *tmp = value->pair.val;
+                                value->pair.val = NULL;
                                 cbor_destroy(value);
                                 value = tmp;
                             }

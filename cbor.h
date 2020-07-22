@@ -94,9 +94,6 @@ bool cbor_is_number(const cbor_value_t *val);
 
 cbor_value_t *cbor_pair_key(const cbor_value_t *val);
 cbor_value_t *cbor_pair_value(const cbor_value_t *val);
-int cbor_pair_set_key(cbor_value_t *val, const char *key);
-int cbor_pair_set_value(cbor_value_t *val, cbor_value_t *value);
-cbor_value_t *cbor_pair_remove_value(cbor_value_t *val);
 
 cbor_value_t *cbor_init_boolean(bool b);
 cbor_value_t *cbor_init_null();

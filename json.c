@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "define.h"
 
 typedef enum {
     JSON_ERR_NONE = 0,
@@ -42,7 +43,6 @@ typedef struct lexer_s {
     int linoff;
 } lexer_t;
 
-extern int cbor_blob_replace(cbor_value_t *val, char **str, size_t *length);
 cbor_value_t *json_parse_string(lexer_t *lexer);
 cbor_value_t *json_parse_value(lexer_t *lexer);
 
@@ -986,8 +986,10 @@ char *cbor_json_dumps(const cbor_value_t *src, size_t *length, bool pretty) {
         } else {
             json__dumps(src, 0, NULL, 0, dst);
         }
-        cbor_blob_replace(dst, &ptr, length);
-        ptr[*length] = 0;
+        ptr = dst->blob.ptr;
+        *length = dst->blob.length;
+        dst->blob.ptr = NULL;
+        dst->blob.length = 0;
         cbor_destroy(dst);
     }
     return ptr;

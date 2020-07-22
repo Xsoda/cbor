@@ -119,9 +119,13 @@ int cbor_container_slice_after(cbor_value_t *dst, cbor_value_t *src, cbor_value_
 int cbor_container_slice_before(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm);
 int cbor_container_distance(const cbor_value_t *container, cbor_value_t *start, cbor_value_t *stop);
 
-cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *str);
-cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *str, cbor_value_t *value);
-cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *str);
+cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *path);
+cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_value_t *value);
+cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *path);
+cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const char *path);
+cbor_value_t *cbor_pointer_replace(cbor_value_t *container, const char *path, cbor_value_t *value);
+cbor_value_t *cbor_pointer_copy(cbor_value_t *container, const char *from, const char *path);
+bool cbor_pointer_test(cbor_value_t *container, const char *path, const cbor_value_t *value);
 
 cbor_value_t *cbor_duplicate(cbor_value_t *val);
 

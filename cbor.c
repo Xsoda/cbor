@@ -108,8 +108,9 @@ static size_t cbor_blob_avalible(cbor_value_t *val, size_t size) {
                 val->blob.allocated += size + 1;
             }
         }
+        return val->blob.allocated - val->blob.length;
     }
-    return val->blob.allocated - val->blob.length;
+    return 0;
 }
 
 int cbor_blob_append(cbor_value_t *val, const char *src, size_t length) {
@@ -207,9 +208,9 @@ int cbor_container_empty(const cbor_value_t *container) {
 }
 
 int cbor_container_size(const cbor_value_t *container) {
-    cbor_value_t *var;
     int size = 0;
     if (container && (container->type == CBOR_TYPE_ARRAY || container->type == CBOR_TYPE_MAP)) {
+        cbor_value_t *var;
         list_foreach(var, &container->container, entry) {
             size++;
         }
@@ -218,12 +219,12 @@ int cbor_container_size(const cbor_value_t *container) {
 }
 
 int cbor_container_clear(cbor_value_t *container) {
-    cbor_value_t *var, *tvar;
     if (!container) {
         return -1;
     }
 
     if (container->type == CBOR_TYPE_ARRAY || container->type == CBOR_TYPE_MAP) {
+        cbor_value_t *var, *tvar;
         list_foreach_safe(var, &container->container, entry, tvar) {
             list_remove(&container->container, var, entry);
             cbor_destroy(var);
@@ -590,14 +591,16 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                 }
             }
         }
-        if (addition != 31 && offset + len <= *length) {
-            cbor_blob_append(val, &src[offset], len);
-            val->blob.ptr[val->blob.length] = 0;
-            offset += len;
-        } else {
-            cbor_destroy(val);
-            val = NULL;
-            offset = 0;
+        if (addition != 31) {
+            if (offset + len <= *length) {
+                cbor_blob_append(val, &src[offset], len);
+                val->blob.ptr[val->blob.length] = 0;
+                offset += len;
+            } else {
+                cbor_destroy(val);
+                val = NULL;
+                offset = 0;
+            }
         }
         break;
     }
@@ -645,14 +648,16 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                 }
             }
         }
-        if (addition != 31 && offset + len <= *length) {
-            cbor_blob_append(val, &src[offset], len);
-            val->blob.ptr[val->blob.length] = 0;
-            offset += len;
-        } else {
-            cbor_destroy(val);
-            val = NULL;
-            offset = 0;
+        if (addition != 31) {
+            if (offset + len <= *length) {
+                cbor_blob_append(val, &src[offset], len);
+                val->blob.ptr[val->blob.length] = 0;
+                offset += len;
+            } else {
+                cbor_destroy(val);
+                val = NULL;
+                offset = 0;
+            }
         }
         break;
     }

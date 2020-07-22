@@ -322,11 +322,6 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                 cbor_value_t *find = cbor_map_find(current, cbor_string(ele), cbor_string_size(ele));
                 if (find) {
                     if (last) {
-                        if (root == current) {
-                            current = NULL;
-                            break;
-                        }
-
                         cbor_container_remove(root, value);
                         if (cbor_is_map(root)) {
                             cbor_value_t *tmp = cbor_pair_remove_value(value);
@@ -336,6 +331,11 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                         cbor_pair_set_value(find, value);
                     } else {
                         current = cbor_pair_value(find);
+
+                        if (current == value) {
+                            current = NULL;
+                            break;
+                        }
                     }
                     continue;
                 } else {
@@ -353,11 +353,6 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
             } else if (cbor_is_array(current)) {
                 if (!strcmp(cbor_string(ele), "-")) {
                     if (last) {
-                        if (root == current) {
-                            current = NULL;
-                            break;
-                        }
-
                         cbor_container_remove(root, value);
                         if (cbor_is_map(root)) {
                             cbor_value_t *tmp = cbor_pair_remove_value(value);
@@ -367,6 +362,10 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                         cbor_container_insert_tail(current, value);
                     } else {
                         current = cbor_array_get(current, -1);
+                        if (current == value) {
+                            current = NULL;
+                            break;
+                        }
                     }
                     continue;
                 } else {
@@ -374,11 +373,6 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                     int idx = strtol(cbor_string(ele), &end, 10);
                     if (*end == '\0' && idx >= 0 && idx <= cbor_container_size(current)) {
                         if (last) {
-                            if (current == root) {
-                                current = NULL;
-                                break;
-                            }
-
                             cbor_container_remove(root, value);
                             if (cbor_is_map(root)) {
                                 cbor_value_t *tmp = cbor_pair_remove_value(value);
@@ -388,6 +382,10 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                             cbor_array_set_value(current, idx, value);
                         } else {
                             current = cbor_array_get(current, idx);
+                            if (current == value) {
+                                current = NULL;
+                                break;
+                            }
                         }
                         continue;
                     }

@@ -728,7 +728,7 @@ cbor_value_t *cbor_json_parse_ex(const void *src, int size, int flag, int *consu
     lexer.linum = 1;
     lexer.linoff = 0;
     json = json_parse_value(&lexer);
-    if (lexer.last_error != JSON_ERR_NONE) {
+    if (lexer.last_error != JSON_ERR_NONE && lexer.flags & JSON_PARSER_REPORT_ERROR) {
         json_lexer_error(&lexer);
     }
     if (consume) {
@@ -738,7 +738,7 @@ cbor_value_t *cbor_json_parse_ex(const void *src, int size, int flag, int *consu
 }
 
 cbor_value_t *cbor_json_loads(const void *src, int size) {
-    return cbor_json_parse_ex(src, size, JSON_PARSER_ALLOW_COMMENT | JSON_PARSER_ALLOW_INF | JSON_PARSER_ALLOW_NAN, NULL);
+    return cbor_json_parse_ex(src, size, 0, NULL);
 }
 
 void json__dumps(const cbor_value_t *src, int indent, const char *space, int length, cbor_value_t *dst) {
@@ -995,7 +995,10 @@ cbor_value_t *cbor_json_loadf(const char *path) {
         content = (char *)malloc(length + 1);
         if (length == fread(content, sizeof(char), length, fp)) {
             content[length] = 0;
-            val = cbor_json_loads(content, length);
+            val = cbor_json_parse_ex(content, length, JSON_PARSER_ALLOW_COMMENT | JSON_PARSER_ALLOW_INF | JSON_PARSER_ALLOW_NAN | JSON_PARSER_REPORT_ERROR, NULL);
+            if (val == NULL) {
+                fprintf(stderr, "load json file %s failed\n", path);
+            }
         }
         free(content);
         fclose(fp);

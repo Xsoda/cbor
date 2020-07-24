@@ -11,8 +11,9 @@ extern "C" {
 
 enum {
     JSON_PARSER_ALLOW_COMMENT = 1 << 0,
-    JSON_PARSER_ALLOW_INF = 1 << 1,
-    JSON_PARSER_ALLOW_NAN = 1 << 2
+    JSON_PARSER_ALLOW_INF     = 1 << 1,
+    JSON_PARSER_ALLOW_NAN     = 1 << 2,
+    JSON_PARSER_REPORT_ERROR  = 1 << 3
 };
 
 typedef enum {
@@ -129,6 +130,7 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
 cbor_value_t *cbor_pointer_replace(cbor_value_t *container, const char *path, cbor_value_t *value);
 cbor_value_t *cbor_pointer_copy(cbor_value_t *container, const char *from, const char *path);
 bool cbor_pointer_test(cbor_value_t *container, const char *path, const cbor_value_t *value);
+bool cbor_value_equal(const cbor_value_t *a, const cbor_value_t *b);
 
 cbor_value_t *cbor_duplicate(cbor_value_t *val);
 

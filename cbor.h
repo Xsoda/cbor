@@ -9,6 +9,12 @@
 extern "C" {
 #endif
 
+enum {
+    JSON_PARSER_ALLOW_COMMENT = 1 << 0,
+    JSON_PARSER_ALLOW_INF = 1 << 1,
+    JSON_PARSER_ALLOW_NAN = 1 << 2
+};
+
 typedef enum {
     CBOR_ITER_AFTER,
     CBOR_ITER_BEFORE,
@@ -136,15 +142,17 @@ int cbor_tag_set(cbor_value_t *tag, long item, cbor_value_t *content);
 cbor_value_t *cbor_loads(const char *src, size_t *length);
 char *cbor_dumps(const cbor_value_t *src, size_t *length);
 
+cbor_value_t *cbor_json_parse_ex(const void *src, int size, int flag, int *consume);
 cbor_value_t *cbor_json_loads(const void *src, int size);
 char *cbor_json_dumps(const cbor_value_t *src, size_t *length, bool pretty);
-cbor_value_t *cbor_json_loadss(const void *src, size_t *size);
-
 
 cbor_value_t *cbor_json_loadf(const char *path);
 int cbor_json_dumpf(cbor_value_t *val, const char *path, bool pretty);
 
 cbor_value_t *cbor_string_split(const char *str, const char *f);
+cbor_value_t *cbor_string_split_linebreak(const char *str);
+cbor_value_t *cbor_string_split_whitespace(const char *str);
+cbor_value_t *cbor_string_split_character(const char *str, int length, const char *characters, int size);
 cbor_value_t *cbor_string_join(cbor_value_t *array, const char *join);
 int cbor_string_replace(cbor_value_t *str, const char *find, const char *replace);
 

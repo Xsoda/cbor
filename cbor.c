@@ -1922,6 +1922,53 @@ cbor_value_t *cbor_string_join(cbor_value_t *array, const char *str) {
     return NULL;
 }
 
+cbor_value_t *cbor_string_split_whitespace(const char *str) {
+    return cbor_string_split_character(str, -1, "\t\n\v\f\r ", 6);
+}
+
+cbor_value_t *cbor_string_split_linebreak(const char *str) {
+    return cbor_string_split_character(str, -1, "\r\n", 2);
+}
+
+cbor_value_t *cbor_string_split_character(const char *str, int length, const char *characters, int size) {
+    int from, to;
+    cbor_value_t *result;
+    if (!str || !characters)
+        return NULL;
+    if (length < 0) {
+        length = strlen(str);
+    }
+    if (size < 0) {
+        size = strlen(characters);
+    }
+    from = 0;
+    to = 0;
+    result = cbor_init_array();
+    while (to < length) {
+        from = to;
+        while (from < length) {
+            if (memchr(characters, str[from], size)) {
+                from += 1;
+            } else {
+                break;
+            }
+        }
+        to = from;
+        while (to < length) {
+            if (!memchr(characters, str[to], size)) {
+                to += 1;
+            } else {
+                break;
+            }
+        }
+        if (to > from) {
+            cbor_value_t *s = cbor_init_string(str + from, to - from);
+            cbor_container_insert_tail(result, s);
+        }
+    }
+    return result;
+}
+
 int cbor_string_replace(cbor_value_t *str, const char *find, const char *repl) {
     int l, m, off, size;
     if (!cbor_is_string(str) || !find || !repl) {

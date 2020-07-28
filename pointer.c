@@ -451,6 +451,9 @@ bool cbor_value_equal(const cbor_value_t *a, const cbor_value_t *b) {
         cbor_iter_t itera, iterb;
         cbor_value_t *elea, *eleb;
 
+        if (cbor_container_size(a) != cbor_container_size(b)) {
+            return false;
+        }
         cbor_iter_init(&itera, a, CBOR_ITER_AFTER);
         cbor_iter_init(&iterb, b, CBOR_ITER_AFTER);
         while ((elea = cbor_iter_next(&itera)) != NULL && ((eleb = cbor_iter_next(&iterb))) != NULL) {
@@ -463,7 +466,7 @@ bool cbor_value_equal(const cbor_value_t *a, const cbor_value_t *b) {
         return true;
     } else if (cbor_is_map(a) && cbor_is_map(b)) {
         cbor_iter_t iter;
-            cbor_value_t *ele;
+        cbor_value_t *ele;
         if (cbor_container_size(a) != cbor_container_size(b))
             return false;
         cbor_iter_init(&iter, a, CBOR_ITER_AFTER);

@@ -144,7 +144,7 @@ int cbor_tag_set(cbor_value_t *tag, long item, cbor_value_t *content);
 cbor_value_t *cbor_loads(const char *src, size_t *length);
 char *cbor_dumps(const cbor_value_t *src, size_t *length);
 
-cbor_value_t *cbor_json_parse_ex(const void *src, int size, int flag, int *consume);
+cbor_value_t *cbor_json_loads_ex(const void *src, int size, int flag, int *consume);
 cbor_value_t *cbor_json_loads(const void *src, int size);
 char *cbor_json_dumps(const cbor_value_t *src, size_t *length, bool pretty);
 

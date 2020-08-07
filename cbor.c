@@ -1783,7 +1783,7 @@ int cbor_array_set_null(cbor_value_t *array, int idx) {
     return cbor_array_set_value(array, idx, val);
 }
 
-cbor_value_t *cbor_duplicate(cbor_value_t *val) {
+cbor_value_t *cbor_duplicate(const cbor_value_t *val) {
     cbor_value_t *dup;
     if (val == NULL) {
         return NULL;

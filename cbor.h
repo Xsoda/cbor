@@ -132,7 +132,7 @@ cbor_value_t *cbor_pointer_copy(cbor_value_t *container, const char *from, const
 bool cbor_pointer_test(cbor_value_t *container, const char *path, const cbor_value_t *value);
 bool cbor_value_equal(const cbor_value_t *a, const cbor_value_t *b);
 
-cbor_value_t *cbor_duplicate(cbor_value_t *val);
+cbor_value_t *cbor_duplicate(const cbor_value_t *val);
 
 void cbor_iter_init(cbor_iter_t *iter, const cbor_value_t *container, cbor_iter_dir dir);
 cbor_value_t *cbor_iter_next(cbor_iter_t *iter);

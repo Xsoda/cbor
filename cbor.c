@@ -1927,7 +1927,26 @@ cbor_value_t *cbor_string_split_whitespace(const char *str) {
 }
 
 cbor_value_t *cbor_string_split_linebreak(const char *str) {
-    return cbor_string_split_character(str, -1, "\r\n", 2);
+    const char *origin = str;
+    cbor_value_t *result = cbor_init_array();
+    while (*str) {
+        if (str[0] == '\r' && str[1] == '\n') {
+            cbor_value_t *ele = cbor_init_string(origin, str - origin);
+            cbor_container_insert_tail(result, ele);
+            str += 2;
+            origin = str;
+        } else if (str[0] == '\r' || str[0] == '\n') {
+            cbor_value_t *ele = cbor_init_string(origin, str - origin);
+            cbor_container_insert_tail(result, ele);
+            str += 1;
+            origin = str;
+        } else {
+            str += 1;
+        }
+    }
+    cbor_value_t *ele = cbor_init_string(origin, str - origin);
+    cbor_container_insert_tail(result, ele);
+    return result;
 }
 
 cbor_value_t *cbor_string_split_character(const char *str, int length, const char *characters, int size) {

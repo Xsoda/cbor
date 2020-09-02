@@ -1,2 +1,0 @@
-/usr/bin/ar qc libcbor.a  CMakeFiles/cbor.dir/cbor.c.o CMakeFiles/cbor.dir/json.c.o
-/usr/bin/ranlib libcbor.a

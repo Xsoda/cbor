@@ -187,7 +187,7 @@
 #include <math.h>
 #include "cbor.c"
 #include "json.c"
-
+#include "pointer.c"
 const char *content[] = {
     "\x00",
     "\x01",
@@ -583,6 +583,8 @@ int test_slice() {
     assert_container_start_a(dst, first);
     assert_container_end_a(dst, last);
     printf("3. slice done\n");
+    cbor_destroy(src);
+    cbor_destroy(dst);
 }
 
 int test_json_pointer() {
@@ -600,28 +602,40 @@ int test_json_pointer() {
       \"m~n\": 8\
 }";
     cbor_value_t *val = cbor_json_loads(content, -1);
-    cbor_value_t *e = cbor_pointer_eval(val, "");
+    cbor_value_t *e = cbor_pointer_get(val, "");
     assert(val == e);
-    e = cbor_pointer_eval(val, "/foo/0");
+    e = cbor_pointer_get(val, "/foo/0");
     assert(strcmp(cbor_string(e), "bar") == 0);
-    e = cbor_pointer_eval(val, "/");
+    e = cbor_pointer_get(val, "/");
     assert(cbor_integer(e) == 0);
-    e = cbor_pointer_eval(val, "/a~1b");
+    e = cbor_pointer_get(val, "/a~1b");
     assert(cbor_integer(e) == 1);
-    e = cbor_pointer_eval(val, "/c%d");
+    e = cbor_pointer_get(val, "/c%d");
     assert(cbor_integer(e) == 2);
-    e = cbor_pointer_eval(val, "/e^f");
+    e = cbor_pointer_get(val, "/e^f");
     assert(cbor_integer(e) == 3);
-    e = cbor_pointer_eval(val, "/g|h");
+    e = cbor_pointer_get(val, "/g|h");
     assert(cbor_integer(e) == 4);
-    e = cbor_pointer_eval(val, "/i\\j");
+    e = cbor_pointer_get(val, "/i\\j");
     assert(cbor_integer(e) == 5);
-    e = cbor_pointer_eval(val, "/k\"l");
+    e = cbor_pointer_get(val, "/k\"l");
     assert(cbor_integer(e) == 6);
-    e = cbor_pointer_eval(val, "/ ");
+    e = cbor_pointer_get(val, "/ ");
     assert(cbor_integer(e) == 7);
-    e = cbor_pointer_eval(val, "/m~0n");
+    e = cbor_pointer_get(val, "/m~0n");
     assert(cbor_integer(e) == 8);
+    e = cbor_pointer_add(val, "/foo/-", cbor_init_string("bay", 3));
+    assert(cbor_is_array(e));
+    e = cbor_pointer_replace(val, "/foo/2", cbor_init_map());
+    assert(cbor_is_array(e));
+    e = cbor_pointer_add(val, "/foo/2/a", cbor_init_string("bay", 3));
+    assert(cbor_is_map(e));
+    e = cbor_pointer_get(val, "/foo/2/a");
+    assert(strcmp(cbor_string(e), "bay") == 0);
+    e = cbor_pointer_move(val, "/foo/2", "/a");
+    assert(cbor_is_map(e));
+    cbor_destroy(val);
+    return 0;
 }
 
 int main(int argc, char **argv) {
@@ -654,6 +668,7 @@ int main(int argc, char **argv) {
         else
             buf = NULL;
         printf("serial: %s\n", buf);
+        free(ser);
         free(buf);
         cbor_destroy(val);
         printf("-----------------------\n");

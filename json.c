@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "define.h"
 
 typedef enum {
     JSON_ERR_NONE = 0,
@@ -37,6 +38,7 @@ typedef struct lexer_s {
     const char *eof;
     const char *cursor;
     const char *linst;
+    int flags;
     lexer_error last_error;
     int linum;
     int linoff;
@@ -54,6 +56,9 @@ static void lexer_skip_block_comment(lexer_t *lexer) {
                 lexer->linoff += 2;
                 lexer->cursor += 2;
                 break;
+            } else {
+                lexer->linoff++;
+                lexer->cursor++;
             }
         } else if (ch == '/' && lexer->cursor + 2 < lexer->eof) {
             int next = (unsigned char)lexer->cursor[1];
@@ -108,14 +113,14 @@ static void lexer_skip_whitespace(lexer_t *lexer) {
         } else if (isspace(ch)) {
             lexer->cursor++;
             lexer->linoff++;
-        } else if (ch == '#') {
+        } else if (ch == '#' && lexer->flags & JSON_PARSER_ALLOW_COMMENT) {
             while (lexer->cursor < lexer->eof
                    && *lexer->cursor != '\n'
                    && *lexer->cursor != '\r') {
                 lexer->cursor++;
                 lexer->linoff++;
             }
-        } else if (ch == '/' && lexer->cursor + 2 < lexer->eof) {
+        } else if (ch == '/' && lexer->cursor + 2 < lexer->eof && lexer->flags & JSON_PARSER_ALLOW_COMMENT) {
             int next = lexer->cursor[1];
             if (next == '/') {
                 lexer->cursor += 2;
@@ -544,7 +549,7 @@ cbor_value_t *json_parse_number(lexer_t *lexer) {
         && (isalpha(tail) || isdigit(tail))) {
         /* handle +inf, -inf */
         double dbl = strtod(ptr, &end);
-        if (isinf(dbl)) {
+        if (isinf(dbl) && lexer->flags & JSON_PARSER_ALLOW_INF) {
             lexer->linoff += (end - ptr);
             lexer->cursor = end;
             num = cbor_init_double(dbl);
@@ -567,6 +572,10 @@ cbor_value_t *json_parse_number(lexer_t *lexer) {
 
 cbor_value_t *json_parse_value(lexer_t *lexer) {
     lexer_skip_whitespace(lexer);
+    if (lexer->cursor >= lexer->eof) {
+        return NULL;
+    }
+
     int leader = (unsigned char)*lexer->cursor;
     if (leader == '{') {
         lexer->cursor += 1;
@@ -626,7 +635,7 @@ cbor_value_t *json_parse_value(lexer_t *lexer) {
             } else {
                 return cbor_init_null();
             }
-        } else if (!strncasecmp(lexer->cursor, "nan", 3)) {
+        } else if (!strncasecmp(lexer->cursor, "nan", 3) && lexer->flags & JSON_PARSER_ALLOW_NAN) {
             double dbl = strtod(lexer->cursor, NULL);
             lexer->cursor += 3;
             lexer->linoff += 3;
@@ -645,7 +654,7 @@ cbor_value_t *json_parse_value(lexer_t *lexer) {
         }
     } else if (leader == '-' || isdigit(leader)) {
         return json_parse_number(lexer);
-    } else if (leader == 'i' || leader == 'I') {
+    } else if ((leader == 'i' || leader == 'I') && lexer->flags & JSON_PARSER_ALLOW_INF) {
         char *end;
         if (!strncasecmp(lexer->cursor, "infinity", 8)) {
             double dbl = strtod(lexer->cursor, &end);
@@ -677,7 +686,7 @@ cbor_value_t *json_parse_value(lexer_t *lexer) {
             lexer->last_error = JSON_ERR_UNEXPECTED_CHARACTER;
             return NULL;
         }
-    } else if (leader == 'N') {
+    } else if (leader == 'N' && lexer->flags & JSON_PARSER_ALLOW_NAN) {
         if (!strncasecmp(lexer->cursor, "nan", 3)) {
             double dbl = strtod(lexer->cursor, NULL);
             lexer->cursor += 3;
@@ -701,10 +710,11 @@ cbor_value_t *json_parse_value(lexer_t *lexer) {
     }
 }
 
-cbor_value_t *cbor_json_loads(const void *src, int size) {
+cbor_value_t *cbor_json_loads_ex(const void *src, int size, int flag, int *consume) {
     lexer_t lexer;
     cbor_value_t *json;
     memset(&lexer, 0, sizeof(lexer));
+    lexer.flags = flag;
     lexer.source = src;
     if (!src) {
         return NULL;
@@ -718,38 +728,21 @@ cbor_value_t *cbor_json_loads(const void *src, int size) {
     lexer.linum = 1;
     lexer.linoff = 0;
     json = json_parse_value(&lexer);
-    if (lexer.last_error != JSON_ERR_NONE) {
+    if (lexer.last_error != JSON_ERR_NONE && lexer.flags & JSON_PARSER_REPORT_ERROR) {
         json_lexer_error(&lexer);
+    }
+    if (consume) {
+        *consume = lexer.cursor - lexer.source;
     }
     return json;
 }
 
-cbor_value_t *cbor_json_loadss(const void *src, size_t *size) {
-    lexer_t lexer;
-    cbor_value_t *json;
-    memset(&lexer, 0, sizeof(lexer));
-    lexer.source = src;
-    if (!src) {
-        return NULL;
-    }
-    lexer.eof = src + *size;
-    lexer.cursor = lexer.source;
-    lexer.linst = lexer.source;
-    lexer.linum = 1;
-    lexer.linoff = 0;
-    json = json_parse_value(&lexer);
-    if (lexer.last_error != JSON_ERR_NONE) {
-        json_lexer_error(&lexer);
-    }
-    if (json == NULL) {
-        *size = 0;
-    } else {
-        *size = lexer.cursor - lexer.source;
-    }
-    return json;
+cbor_value_t *cbor_json_loads(const void *src, int size) {
+    return cbor_json_loads_ex(src, size, 0, NULL);
 }
 
 void json__dumps(const cbor_value_t *src, int indent, const char *space, int length, cbor_value_t *dst) {
+    int i;
     char buffer[1024];
     cbor_value_t *val;
     if (cbor_is_integer(src)) {
@@ -760,7 +753,7 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
         const char *ptr = cbor_string(src);
         int length = cbor_string_size(src);
 
-        for (int i = 0; i < length; i++) {
+        for (i = 0; i < length; i++) {
             switch ((unsigned char)ptr[i]) {
             case '\n':
                 cbor_blob_append_byte(dst, '\\');
@@ -774,10 +767,6 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
                 cbor_blob_append_byte(dst, '\\');
                 cbor_blob_append_byte(dst, '\\');
                 break;
-            /* case '/': */
-            /*     cbor_blob_append_byte(dst, '\\'); */
-            /*     cbor_blob_append_byte(dst, '/'); */
-            /*     break; */
             case '"':
                 cbor_blob_append_byte(dst, '\\');
                 cbor_blob_append_byte(dst, '"');
@@ -893,7 +882,7 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
              val != NULL;
              val = cbor_container_next(src, val)) {
             if (space) {
-                for (int i = 0; i < indent; i++) {
+                for (i = 0; i < indent; i++) {
                     cbor_blob_append(dst, space, length);
                 }
             }
@@ -910,7 +899,7 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
         }
         indent--;
         if (space) {
-            for (int i = 0; i < indent; i++) {
+            for (i = 0; i < indent; i++) {
                 cbor_blob_append(dst, space, length);
             }
         }
@@ -925,7 +914,7 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
              val != NULL;
              val = cbor_container_next(src, val)) {
             if (space) {
-                for (int i = 0; i < indent; i++) {
+                for (i = 0; i < indent; i++) {
                     cbor_blob_append(dst, space, length);
                 }
             }
@@ -945,13 +934,18 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
         }
         indent--;
         if (space) {
-            for (int i = 0; i < indent; i++) {
+            for (i = 0; i < indent; i++) {
                 cbor_blob_append(dst, space, length);
             }
         }
         cbor_blob_append_byte(dst, '}');
     } else if (cbor_is_double(src)) {
-        int len = snprintf(buffer, sizeof(buffer), "%lf", cbor_real(src));
+        int len;
+        if (isinf(cbor_real(src)) || isnan(cbor_real(src))) {
+            len = snprintf(buffer, sizeof(buffer), "%lf", .0);
+        } else {
+            len = snprintf(buffer, sizeof(buffer), "%lf", cbor_real(src));
+        }
         cbor_blob_append(dst, buffer, len);
     } else if (cbor_is_null(src)) {
         cbor_blob_append(dst, "null", 4);
@@ -976,8 +970,10 @@ char *cbor_json_dumps(const cbor_value_t *src, size_t *length, bool pretty) {
         } else {
             json__dumps(src, 0, NULL, 0, dst);
         }
-        cbor_blob_replace(dst, &ptr, length);
-        ptr[*length] = 0;
+        ptr = dst->blob.ptr;
+        *length = dst->blob.length;
+        dst->blob.ptr = NULL;
+        dst->blob.length = 0;
         cbor_destroy(dst);
     }
     return ptr;
@@ -995,7 +991,10 @@ cbor_value_t *cbor_json_loadf(const char *path) {
         content = (char *)malloc(length + 1);
         if (length == fread(content, sizeof(char), length, fp)) {
             content[length] = 0;
-            val = cbor_json_loads(content, length);
+            val = cbor_json_loads_ex(content, length, JSON_PARSER_ALLOW_COMMENT | JSON_PARSER_ALLOW_INF | JSON_PARSER_ALLOW_NAN | JSON_PARSER_REPORT_ERROR, NULL);
+            if (val == NULL) {
+                fprintf(stderr, "load json file %s failed\n", path);
+            }
         }
         free(content);
         fclose(fp);
@@ -1004,9 +1003,9 @@ cbor_value_t *cbor_json_loadf(const char *path) {
 }
 
 int cbor_json_dumpf(cbor_value_t *val, const char *path, bool pretty) {
-    int r;
     FILE *fp;
     size_t length;
+    int r = -1;
     char *content = cbor_json_dumps(val, &length, pretty);
     if (content && length) {
         fp = fopen(path, "w");

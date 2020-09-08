@@ -9,6 +9,13 @@
 extern "C" {
 #endif
 
+enum {
+    JSON_PARSER_ALLOW_COMMENT = 1 << 0,
+    JSON_PARSER_ALLOW_INF     = 1 << 1,
+    JSON_PARSER_ALLOW_NAN     = 1 << 2,
+    JSON_PARSER_REPORT_ERROR  = 1 << 3
+};
+
 typedef enum {
     CBOR_ITER_AFTER,
     CBOR_ITER_BEFORE,
@@ -31,7 +38,6 @@ int cbor_blob_append_byte(cbor_value_t *val, uint8_t byte);
 int cbor_blob_append_word(cbor_value_t *val, uint16_t word);
 int cbor_blob_append_dword(cbor_value_t *val, uint32_t dword);
 int cbor_blob_append_qword(cbor_value_t *val, uint64_t qword);
-int cbor_blob_replace(cbor_value_t *val, char **str, size_t *length);
 void cbor_blob_trim(cbor_value_t *val);
 
 int cbor_container_empty(const cbor_value_t *container);
@@ -66,6 +72,8 @@ const char *cbor_array_get_string(const cbor_value_t *array, int idx);
 long long cbor_array_get_integer(const cbor_value_t *array, int idx);
 double cbor_array_get_double(const cbor_value_t *array, int idx);
 bool cbor_array_get_boolean(const cbor_value_t *array, int idx);
+
+cbor_value_t *cbor_array_remove(cbor_value_t *array, int idx);
 
 int cbor_array_set_value(cbor_value_t *array, int idx, cbor_value_t *val);
 int cbor_array_set_string(cbor_value_t *array, int idx, const char *str);
@@ -115,11 +123,16 @@ int cbor_container_slice_after(cbor_value_t *dst, cbor_value_t *src, cbor_value_
 int cbor_container_slice_before(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm);
 int cbor_container_distance(const cbor_value_t *container, cbor_value_t *start, cbor_value_t *stop);
 
-cbor_value_t *cbor_pointer_eval(cbor_value_t *container, const char *str);
-cbor_value_t *cbor_pointer_build(cbor_value_t *arr);
-void cbor_value_replace(cbor_value_t *dst, cbor_value_t *src);
+cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *path);
+cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_value_t *value);
+cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *path);
+cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const char *path);
+cbor_value_t *cbor_pointer_replace(cbor_value_t *container, const char *path, cbor_value_t *value);
+cbor_value_t *cbor_pointer_copy(cbor_value_t *container, const char *from, const char *path);
+bool cbor_pointer_test(cbor_value_t *container, const char *path, const cbor_value_t *value);
+bool cbor_value_equal(const cbor_value_t *a, const cbor_value_t *b);
 
-cbor_value_t *cbor_duplicate(cbor_value_t *val);
+cbor_value_t *cbor_duplicate(const cbor_value_t *val);
 
 void cbor_iter_init(cbor_iter_t *iter, const cbor_value_t *container, cbor_iter_dir dir);
 cbor_value_t *cbor_iter_next(cbor_iter_t *iter);
@@ -131,13 +144,19 @@ int cbor_tag_set(cbor_value_t *tag, long item, cbor_value_t *content);
 cbor_value_t *cbor_loads(const char *src, size_t *length);
 char *cbor_dumps(const cbor_value_t *src, size_t *length);
 
+cbor_value_t *cbor_json_loads_ex(const void *src, int size, int flag, int *consume);
 cbor_value_t *cbor_json_loads(const void *src, int size);
 char *cbor_json_dumps(const cbor_value_t *src, size_t *length, bool pretty);
-cbor_value_t *cbor_json_loadss(const void *src, size_t *size);
-
 
 cbor_value_t *cbor_json_loadf(const char *path);
 int cbor_json_dumpf(cbor_value_t *val, const char *path, bool pretty);
+
+cbor_value_t *cbor_string_split(const char *str, const char *f);
+cbor_value_t *cbor_string_split_linebreak(const char *str);
+cbor_value_t *cbor_string_split_whitespace(const char *str);
+cbor_value_t *cbor_string_split_character(const char *str, int length, const char *characters, int size);
+cbor_value_t *cbor_string_join(cbor_value_t *array, const char *join);
+int cbor_string_replace(cbor_value_t *str, const char *find, const char *replace);
 
 #ifdef __cplusplus
 }

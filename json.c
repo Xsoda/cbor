@@ -200,6 +200,7 @@ cbor_value_t *json_parse_object(lexer_t *lexer) {
     }
 
     while (lexer->cursor < lexer->eof) {
+        cbor_value_t *pair = NULL;
         cbor_value_t *key = NULL;
         cbor_value_t *val = NULL;
 
@@ -232,7 +233,10 @@ cbor_value_t *json_parse_object(lexer_t *lexer) {
                     break;
                 }
 
-                cbor_map_insert(object, key, val);
+                pair = cbor_create(CBOR__TYPE_PAIR);
+                pair->pair.key = key;
+                pair->pair.val = val;
+                cbor_container_insert_tail(object, pair);
 
                 lexer_skip_whitespace(lexer);
 

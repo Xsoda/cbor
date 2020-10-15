@@ -49,39 +49,6 @@ int cbor_container_insert_head(cbor_value_t *container, cbor_value_t *val);
 int cbor_container_insert_after(cbor_value_t *container, cbor_value_t *elm, cbor_value_t *val);
 int cbor_container_insert_before(cbor_value_t *container, cbor_value_t *elm, cbor_value_t *val);
 
-int cbor_map_insert(cbor_value_t *map, cbor_value_t *key, cbor_value_t *val);
-int cbor_map_destroy(cbor_value_t *map, const char *key);
-int cbor_map_set_integer(cbor_value_t *map, const char *key, long long integer);
-int cbor_map_set_double(cbor_value_t *map, const char *key, double dbl);
-int cbor_map_set_boolean(cbor_value_t *map, const char *key, bool boolean);
-int cbor_map_set_string(cbor_value_t *map, const char *key, const char *str);
-int cbor_map_set_null(cbor_value_t *map, const char *key);
-int cbor_map_set_value(cbor_value_t *map, const char *key, cbor_value_t *value);
-
-cbor_value_t *cbor_map_find(const cbor_value_t *map, const char *key, size_t len);
-cbor_value_t *cbor_map_unlink(cbor_value_t *map, const char *key);
-cbor_value_t *cbor_map_remove(cbor_value_t *map, const char *key);
-cbor_value_t *cbor_map_dotget(const cbor_value_t *map, const char *key);
-const char *cbor_map_dotget_string(const cbor_value_t *map, const char *key);
-long long cbor_map_dotget_integer(const cbor_value_t *map, const char *key);
-bool cbor_map_dotget_boolean(const cbor_value_t *map, const char *key);
-double cbor_map_dotget_double(const cbor_value_t *map, const char *key);
-
-cbor_value_t *cbor_array_get(const cbor_value_t *array, int idx);
-const char *cbor_array_get_string(const cbor_value_t *array, int idx);
-long long cbor_array_get_integer(const cbor_value_t *array, int idx);
-double cbor_array_get_double(const cbor_value_t *array, int idx);
-bool cbor_array_get_boolean(const cbor_value_t *array, int idx);
-
-cbor_value_t *cbor_array_remove(cbor_value_t *array, int idx);
-
-int cbor_array_set_value(cbor_value_t *array, int idx, cbor_value_t *val);
-int cbor_array_set_string(cbor_value_t *array, int idx, const char *str);
-int cbor_array_set_integer(cbor_value_t *array, int idx, long long integer);
-int cbor_array_set_double(cbor_value_t *array, int idx, double dbl);
-int cbor_array_set_boolean(cbor_value_t *array, int idx, bool boolean);
-int cbor_array_set_null(cbor_value_t *array, int idx);
-
 long long cbor_integer(const cbor_value_t *val);
 double cbor_real(const cbor_value_t *val);
 int cbor_string_size(const cbor_value_t *val);
@@ -118,10 +85,6 @@ cbor_value_t *cbor_container_prev(const cbor_value_t *container, cbor_value_t *e
 cbor_value_t *cbor_container_remove(cbor_value_t *container, cbor_value_t *elm);
 
 int cbor_container_concat(cbor_value_t *dst, cbor_value_t *src);
-int cbor_container_slice(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *start, cbor_value_t *stop);
-int cbor_container_slice_after(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm);
-int cbor_container_slice_before(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm);
-int cbor_container_distance(const cbor_value_t *container, cbor_value_t *start, cbor_value_t *stop);
 
 cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *path);
 cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_value_t *value);
@@ -129,8 +92,14 @@ cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *path);
 cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const char *path);
 cbor_value_t *cbor_pointer_replace(cbor_value_t *container, const char *path, cbor_value_t *value);
 cbor_value_t *cbor_pointer_copy(cbor_value_t *container, const char *from, const char *path);
-bool cbor_pointer_test(cbor_value_t *container, const char *path, const cbor_value_t *value);
-bool cbor_value_equal(const cbor_value_t *a, const cbor_value_t *b);
+
+int cbor_pointer_seti(cbor_value_t *container, const char *path, long long integer);
+int cbor_pointer_setb(cbor_value_t *container, const char *path, bool boolean);
+int cbor_pointer_sets(cbor_value_t *container, const char *path, const char *str);
+int cbor_pointer_setf(cbor_value_t *container, const char *path, double dbl);
+int cbor_pointer_setn(cbor_value_t *container, const char *path);
+int cbor_pointer_seto(cbor_value_t *container, const char *path);
+int cbor_pointer_seta(cbor_value_t *container, const char *path);
 
 cbor_value_t *cbor_duplicate(const cbor_value_t *val);
 

@@ -231,8 +231,8 @@ cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_v
                     continue;
                 } else if (last) {
                     cbor_value_t *val = cbor_create(CBOR__TYPE_PAIR);
-                    val->pair.key = cbor_duplicate(ele);
-                    val->pair.val = value;
+                    cbor_pair_set_key(val, cbor_duplicate(ele));
+                    cbor_pair_set_val(val, value);
                     cbor_container_insert_tail(current, val);
                     continue;
                 }
@@ -491,8 +491,8 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                             value->pair.key = cbor_duplicate(ele);
                         } else {
                             cbor_value_t *tmp = cbor_create(CBOR__TYPE_PAIR);
-                            tmp->pair.key = cbor_duplicate(ele);
-                            tmp->pair.val = value;
+                            cbor_pair_set_key(tmp, cbor_duplicate(ele));
+                            cbor_pair_set_val(tmp, value);
                             value = tmp;
                         }
                         cbor_container_insert_tail(current, value);
@@ -627,4 +627,24 @@ int cbor_pointer_seta(cbor_value_t *container, const char *path) {
     }
     cbor_destroy(val);
     return -1;
+}
+
+long long cbor_pointer_geti(cbor_value_t *container, const char *path) {
+    cbor_value_t *val = cbor_pointer_get(container, path);
+    return cbor_integer(val);
+}
+
+const char *cbor_pointer_gets(cbor_value_t *container, const char *path) {
+    cbor_value_t *val = cbor_pointer_get(container, path);
+    return cbor_string(val);
+}
+
+bool cbor_pointer_getb(cbor_value_t *container, const char *path) {
+    cbor_value_t *val = cbor_pointer_get(container, path);
+    return cbor_string(val);
+}
+
+double cbor_pointer_getf(cbor_value_t *container, const char *path) {
+    cbor_value_t *val = cbor_pointer_get(container, path);
+    return cbor_real(val);
 }

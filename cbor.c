@@ -9,6 +9,7 @@
 #include "define.h"
 #include "fastsearch.h"
 
+
 cbor_value_t *cbor_create(cbor_type type) {
     cbor_value_t *val = (cbor_value_t *)malloc(sizeof(cbor_value_t));
     memset(val, 0, sizeof(cbor_value_t));
@@ -193,7 +194,14 @@ int cbor_container_swap(cbor_value_t *ca, cbor_value_t *cb) {
         && cb
         && ca->type == cb->type
         && (ca->type == CBOR_TYPE_ARRAY || ca->type == CBOR_TYPE_MAP)) {
+        cbor_value_t *var;
         list_swap(&ca->container, &cb->container, _cbor_value, entry);
+        list_foreach(var, &ca->container, entry) {
+            var->parent = ca;
+        }
+        list_foreach(var, &cb->container, entry) {
+            var->parent = cb;
+        }
     }
     return -1;
 }
@@ -220,7 +228,6 @@ int cbor_container_insert_head(cbor_value_t *container, cbor_value_t *val) {
     if (container->type == CBOR_TYPE_ARRAY || container->type == CBOR_TYPE_MAP) {
         assert(val->parent == NULL);
         assert(val->entry.le_next == NULL && val->entry.le_prev == NULL);
-
         list_insert_head(&container->container, val, entry);
         val->parent = container;
         return 0;
@@ -316,6 +323,38 @@ int cbor_container_concat(cbor_value_t *dst, cbor_value_t *src) {
             first->parent = dst;
         }
         return 0;
+    }
+    return -1;
+}
+
+int cbor_map_insert(cbor_value_t *map, cbor_value_t *key, cbor_value_t *val) {
+    if (!map || !key || !val) {
+        return -1;
+    }
+    if (map->type == CBOR_TYPE_MAP) {
+        cbor_value_t *pair = cbor_create(CBOR__TYPE_PAIR);
+        cbor_pair_set_key(pair, key);
+        cbor_pair_set_val(pair, val);
+        cbor_container_insert_tail(map, pair);
+        return 0;
+    }
+    return -1;
+}
+
+int cbor_map_destroy(cbor_value_t *map, const char *key) {
+    if (!map || !key) {
+        return -1;
+    }
+    if (map->type == CBOR_TYPE_MAP) {
+        cbor_value_t *var, *tvar;
+        list_foreach_safe(var, &map->container, entry, tvar) {
+            if (cbor_is_string(var->pair.key) && !strcmp(key, var->pair.key->blob.ptr)) {
+                cbor_container_remove(map, var);
+                cbor_destroy(var);
+                return 0;
+            }
+        }
+        return -1;
     }
     return -1;
 }
@@ -1292,6 +1331,171 @@ cbor_value_t *cbor_iter_next(cbor_iter_t *iter) {
     return current;
 }
 
+cbor_value_t *cbor_map_find(const cbor_value_t *map, const char *key, size_t len) {
+    cbor_value_t *var;
+    if (map == NULL || map->type != CBOR_TYPE_MAP || key == NULL) {
+        return NULL;
+    }
+    list_foreach(var, &map->container, entry) {
+        if (var->pair.key->type == CBOR_TYPE_STRING) {
+            if (var->pair.key->blob.length == len
+                && !strncmp(var->pair.key->blob.ptr, key, len)) {
+                break;
+            }
+        }
+    }
+    return var;
+}
+
+int cbor_map_set(cbor_value_t *map, const char *key, cbor_value_t *val) {
+    size_t len;
+    cbor_value_t *find;
+    if (map == NULL || map->type != CBOR_TYPE_MAP || val == NULL || key == NULL) {
+        return -1;
+    }
+    len = strlen(key);
+    find = cbor_map_find(map, key, len);
+    if (find == NULL) {
+        cbor_value_t *pair = cbor_create(CBOR__TYPE_PAIR);
+        pair->pair.key = cbor_create(CBOR_TYPE_STRING);
+        cbor_blob_append(pair->pair.key, key, strlen(key));
+        pair->pair.val = val;
+        cbor_container_insert_tail(map, pair);
+    } else {
+        cbor_destroy(find->pair.val);
+        find->pair.val = val;
+    }
+    return 0;
+}
+
+int cbor_map_set_integer(cbor_value_t *map, const char *key, long long integer) {
+    size_t len;
+    cbor_value_t *find;
+    if (map == NULL || map->type != CBOR_TYPE_MAP || key == NULL) {
+        return -1;
+    }
+    len = strlen(key);
+    find = cbor_map_find(map, key, len);
+    if (find == NULL) {
+        find = cbor_create(CBOR__TYPE_PAIR);
+        find->pair.key = cbor_init_string(key, len);
+        find->pair.val = cbor_init_integer(integer);
+        cbor_container_insert_tail(map, find);
+    } else {
+        cbor_destroy(find->pair.val);
+        find->pair.val = cbor_init_integer(integer);
+    }
+    return 0;
+}
+
+int cbor_map_set_double(cbor_value_t *map, const char *key, double dbl) {
+    size_t len;
+    cbor_value_t *find;
+    if (map == NULL || map->type != CBOR_TYPE_MAP || key == NULL) {
+        return -1;
+    }
+    len = strlen(key);
+    find = cbor_map_find(map, key, len);
+    if (find == NULL) {
+        find = cbor_create(CBOR__TYPE_PAIR);
+        find->pair.key = cbor_init_string(key, len);
+        find->pair.val = cbor_init_double(dbl);
+        cbor_container_insert_tail(map, find);
+    } else {
+        cbor_destroy(find->pair.val);
+        find->pair.val = cbor_init_double(dbl);
+    }
+    return 0;
+}
+
+int cbor_map_set_boolean(cbor_value_t *map, const char *key, bool boolean) {
+    size_t len;
+    cbor_value_t *find;
+    if (map == NULL || map->type != CBOR_TYPE_MAP || key == NULL) {
+        return -1;
+    }
+    len = strlen(key);
+    find = cbor_map_find(map, key, len);
+    if (find == NULL) {
+        find = cbor_create(CBOR__TYPE_PAIR);
+        find->pair.key = cbor_init_string(key, len);
+        find->pair.val = cbor_init_boolean(boolean);
+        cbor_container_insert_tail(map, find);
+    } else {
+        cbor_destroy(find->pair.val);
+        find->pair.val = cbor_init_boolean(boolean);
+    }
+    return 0;
+}
+int cbor_map_set_string(cbor_value_t *map, const char *key, const char *str) {
+    size_t len;
+    cbor_value_t *find;
+    if (map == NULL || map->type != CBOR_TYPE_MAP || key == NULL) {
+        return -1;
+    }
+    if (str == NULL) {
+        str = "";
+    }
+
+    len = strlen(key);
+    find = cbor_map_find(map, key, len);
+    if (find == NULL) {
+        find = cbor_create(CBOR__TYPE_PAIR);
+        find->pair.key = cbor_init_string(key, len);
+        find->pair.val = cbor_init_string(str, strlen(str));
+        cbor_container_insert_tail(map, find);
+    } else {
+        cbor_destroy(find->pair.val);
+        find->pair.val = cbor_init_string(str, strlen(str));
+    }
+    return 0;
+}
+
+int cbor_map_set_null(cbor_value_t *map, const char *key) {
+    size_t len;
+    cbor_value_t *find;
+    if (map == NULL || map->type != CBOR_TYPE_MAP || key == NULL) {
+        return -1;
+    }
+    len = strlen(key);
+    find = cbor_map_find(map, key, len);
+    if (find == NULL) {
+        find = cbor_create(CBOR__TYPE_PAIR);
+        find->pair.key = cbor_init_string(key, len);
+        find->pair.val = cbor_init_null();
+        cbor_container_insert_tail(map, find);
+    } else {
+        cbor_destroy(find->pair.val);
+        find->pair.val = cbor_init_null();
+    }
+    return 0;
+}
+
+int cbor_map_set_value(cbor_value_t *map, const char *key, cbor_value_t *value) {
+    size_t len;
+    cbor_value_t *find;
+    if (map == NULL || map->type != CBOR_TYPE_MAP || value == NULL) {
+        return -1;
+    }
+
+    if (value->entry.le_prev || value->entry.le_next) {
+        return -1;
+    }
+
+    len = strlen(key);
+    find = cbor_map_find(map, key, len);
+    if (find == NULL) {
+        find = cbor_create(CBOR__TYPE_PAIR);
+        find->pair.key = cbor_init_string(key, len);
+        find->pair.val = value;
+        cbor_container_insert_tail(map, find);
+    } else {
+        cbor_destroy(find->pair.val);
+        find->pair.val = value;
+    }
+    return 0;
+}
+
 cbor_value_t *cbor_duplicate(const cbor_value_t *val) {
     cbor_value_t *dup;
     if (val == NULL) {
@@ -1335,8 +1539,8 @@ cbor_value_t *cbor_duplicate(const cbor_value_t *val) {
     }
     case CBOR__TYPE_PAIR: {
         dup = cbor_create(val->type);
-        dup->pair.key = cbor_duplicate(val->pair.key);
-        dup->pair.val = cbor_duplicate(val->pair.val);
+        cbor_pair_set_key(dup, cbor_duplicate(val->pair.key));
+        cbor_pair_set_val(dup, cbor_duplicate(val->pair.val));
         break;
     }
     }
@@ -1355,6 +1559,34 @@ cbor_value_t *cbor_pair_value(const cbor_value_t *val) {
         return val->pair.val;
     }
     return NULL;
+}
+
+int cbor_pair_set_key(cbor_value_t *pair, cbor_value_t *key) {
+    if (key && pair && key->type == CBOR_TYPE_STRING && pair->type == CBOR__TYPE_PAIR) {
+        assert(key->parent == NULL);
+        assert(key->entry.le_next == NULL && key->entry.le_prev == NULL);
+        if (pair->pair.key) {
+            cbor_destroy(pair->pair.key);
+        }
+        pair->pair.key = key;
+        key->parent = pair;
+        return 0;
+    }
+    return -1;
+}
+
+int cbor_pair_set_val(cbor_value_t *pair, cbor_value_t *val) {
+    if (val && pair && pair->type == CBOR__TYPE_PAIR) {
+        assert(val->parent == NULL);
+        assert(val->entry.le_next == NULL && val->entry.le_prev == NULL);
+        if (pair->pair.val) {
+            cbor_destroy(pair->pair.val);
+        }
+        pair->pair.val = val;
+        val->parent = pair;
+        return 0;
+    }
+    return -1;
 }
 
 const char *cbor_type_str(const cbor_value_t *val) {

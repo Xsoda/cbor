@@ -55,5 +55,4 @@ struct _cbor_value {
 };
 
 struct _cbor_value *cbor_create(cbor_type type);
-
 #endif  /* !__CBOR_DEFINE_H__ */

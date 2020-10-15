@@ -512,6 +512,81 @@ int assert_container_end_a(cbor_value_t *con, cbor_value_t *a) {
     return 0;
 }
 
+int test_slice() {
+    cbor_value_t *src, *dst, *start, *stop, *first, *last, *prev, *next;
+    printf("test slice ..............\n");
+    src = cbor_init_array();
+    dst = cbor_init_array();
+    for (int i = 0; i < 100; i++) {
+        cbor_container_insert_tail(src, cbor_init_integer(i));
+    }
+    first = cbor_container_first(src);
+    last = cbor_container_last(src);
+    start = cbor_array_get(src, 50);
+    stop = cbor_container_prev(src, start);
+    cbor_container_slice_before(dst, src, start);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, stop);
+    assert_container_start_a(src, start);
+    assert_container_end_a(src, last);
+    printf("slice before done\n");
+
+    cbor_container_concat(dst, src);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, last);
+    printf("concat done\n");
+
+    stop = cbor_container_next(dst, start);
+    cbor_container_slice_after(src, dst, start);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, start);
+    assert_container_start_a(src, stop);
+    assert_container_end_a(src, last);
+    printf("slice after done\n");
+
+    cbor_container_concat(dst, src);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, last);
+    printf("concat done\n");
+
+    stop = cbor_array_get(dst, 60);
+    prev = cbor_container_prev(dst, start);
+    next = cbor_container_next(dst, stop);
+    cbor_container_slice(src, dst, start, stop);
+    assert_container_start_a(src, start);
+    assert_container_end_a(src, stop);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, last);
+    assert_a_next_b(prev, next);
+    printf("1. slice done\n");
+
+    cbor_container_clear(src);
+    start = cbor_container_first(dst);
+    stop = cbor_array_get(dst, 10);
+    first = cbor_container_next(dst, stop);
+    last = cbor_container_last(dst);
+    cbor_container_slice(src, dst, start, stop);
+    assert_container_start_a(src, start);
+    assert_container_end_a(src, stop);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, last);
+    printf("2. slice done\n");
+
+    cbor_container_clear(src);
+    start = cbor_array_get(dst, 20);
+    last = cbor_container_prev(dst, start);
+    stop = cbor_container_last(dst);
+    first = cbor_container_first(dst);
+    cbor_container_slice(src, dst, start, stop);
+    assert_container_start_a(src, start);
+    assert_container_end_a(src, stop);
+    assert_container_start_a(dst, first);
+    assert_container_end_a(dst, last);
+    printf("3. slice done\n");
+    cbor_destroy(src);
+    cbor_destroy(dst);
+}
+
 int test_json_pointer() {
     const char *content =
         "{\
@@ -600,6 +675,7 @@ int main(int argc, char **argv) {
     }
     test_f64();
     test_json();
+    test_slice();
     test_json_pointer();
     return 0;
 }

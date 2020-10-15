@@ -51,6 +51,9 @@ struct _cbor_value {
         list_head(_cbor_cname, _cbor_value) container;
     };
     list_entry(_cbor_value) entry;
+    struct _cbor_value *parent;
 };
+
+struct _cbor_value *cbor_create(cbor_type type);
 
 #endif  /* !__CBOR_DEFINE_H__ */

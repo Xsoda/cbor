@@ -81,9 +81,6 @@ bool cbor_is_number(const cbor_value_t *val);
 
 cbor_value_t *cbor_pair_key(const cbor_value_t *val);
 cbor_value_t *cbor_pair_value(const cbor_value_t *val);
-int cbor_pair_set_key(cbor_value_t *pair, cbor_value_t *key);
-int cbor_pair_set_val(cbor_value_t *pair, cbor_value_t *val);
-
 cbor_value_t *cbor_init_boolean(bool b);
 cbor_value_t *cbor_init_null();
 cbor_value_t *cbor_init_map();
@@ -92,6 +89,8 @@ cbor_value_t *cbor_init_integer(long long l);
 cbor_value_t *cbor_init_string(const char *str, int len);
 cbor_value_t *cbor_init_double(double d);
 cbor_value_t *cbor_init_bytestring(const char *str, int len);
+cbor_value_t *cbor_init_pair(cbor_value_t *key, cbor_value_t *val);
+
 
 cbor_value_t *cbor_container_first(const cbor_value_t *container);
 cbor_value_t *cbor_container_last(const cbor_value_t *container);
@@ -100,10 +99,6 @@ cbor_value_t *cbor_container_prev(const cbor_value_t *container, cbor_value_t *e
 cbor_value_t *cbor_container_remove(cbor_value_t *container, cbor_value_t *elm);
 
 int cbor_container_concat(cbor_value_t *dst, cbor_value_t *src);
-int cbor_container_slice(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *start, cbor_value_t *stop);
-int cbor_container_slice_after(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm);
-int cbor_container_slice_before(cbor_value_t *dst, cbor_value_t *src, cbor_value_t *elm);
-int cbor_container_distance(const cbor_value_t *container, cbor_value_t *start, cbor_value_t *stop);
 
 cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *path);
 cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_value_t *value);

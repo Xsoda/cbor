@@ -230,9 +230,7 @@ cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_v
                     }
                     continue;
                 } else if (last) {
-                    cbor_value_t *val = cbor_create(CBOR__TYPE_PAIR);
-                    cbor_pair_set_key(val, cbor_duplicate(ele));
-                    cbor_pair_set_val(val, value);
+                    cbor_value_t *val = cbor_init_pair(cbor_duplicate(ele), value);
                     cbor_container_insert_tail(current, val);
                     continue;
                 }
@@ -490,9 +488,7 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                             cbor_destroy(value->pair.key);
                             value->pair.key = cbor_duplicate(ele);
                         } else {
-                            cbor_value_t *tmp = cbor_create(CBOR__TYPE_PAIR);
-                            cbor_pair_set_key(tmp, cbor_duplicate(ele));
-                            cbor_pair_set_val(tmp, value);
+                            cbor_value_t *tmp = cbor_init_pair(cbor_duplicate(ele), value);
                             value = tmp;
                         }
                         cbor_container_insert_tail(current, value);

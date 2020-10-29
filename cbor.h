@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -107,6 +108,7 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
 cbor_value_t *cbor_pointer_replace(cbor_value_t *container, const char *path, cbor_value_t *value);
 cbor_value_t *cbor_pointer_copy(cbor_value_t *container, const char *from, const char *path);
 bool cbor_pointer_test(cbor_value_t *container, const char *path, const cbor_value_t *value);
+int cbor_pointer_join(char *buf, size_t size, ...);
 
 int cbor_pointer_seta(cbor_value_t *container, const char *path);
 int cbor_pointer_setb(cbor_value_t *container, const char *path, bool boolean);

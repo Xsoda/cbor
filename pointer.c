@@ -1,6 +1,7 @@
 #include "cbor.h"
 #include "define.h"
 #include <string.h>
+#include <stdarg.h>
 
 bool cbor_value_test(const cbor_value_t *va, const cbor_value_t *vb) {
     if (va == NULL || vb == NULL) {
@@ -643,4 +644,33 @@ bool cbor_pointer_getb(cbor_value_t *container, const char *path) {
 double cbor_pointer_getf(cbor_value_t *container, const char *path) {
     cbor_value_t *val = cbor_pointer_get(container, path);
     return cbor_real(val);
+}
+
+int cbor_pointer_join(char *buf, size_t size, ...) {
+    va_list ap;
+    size_t len = 0;
+    va_start(ap, size);
+    const char *arg = va_arg(ap, const char *);
+    while (arg != NULL && len + 1 < size) {
+        buf[len++] = '/';
+        while (*arg && len + 2 < size) {
+            if (*arg == '~') {
+                buf[len++] = '~';
+                buf[len++] = '0';
+            } else if (*arg == '/') {
+                buf[len++] = '~';
+                buf[len++] = '1';
+            } else {
+                buf[len++] = *arg;
+            }
+            arg++;
+        }
+        arg = va_arg(ap, const char *);
+    }
+    va_end(ap);
+    if (arg == NULL && len + 1 < size) {
+        buf[len] = 0;
+        return len;
+    }
+    return 0;
 }

@@ -117,6 +117,7 @@ int cbor_pointer_seti(cbor_value_t *container, const char *path, long long integ
 int cbor_pointer_seto(cbor_value_t *container, const char *path);
 int cbor_pointer_setn(cbor_value_t *container, const char *path);
 int cbor_pointer_sets(cbor_value_t *container, const char *path, const char *str);
+int cbor_pointer_setv(cbor_value_t *container, const char *path, cbor_value_t *val);
 
 long long cbor_pointer_geti(cbor_value_t *container, const char *path);
 const char *cbor_pointer_gets(cbor_value_t *container, const char *path);

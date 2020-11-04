@@ -40,8 +40,8 @@ int cbor_destroy(cbor_value_t *val) {
     } else if (val->type == CBOR__TYPE_PAIR) {
         cbor_destroy(val->pair.key);
         val->pair.key = NULL;
-        cbor_destroy(val->pair.val);
-        val->pair.val = NULL;
+        cbor_destroy(val->pair.value);
+        val->pair.value = NULL;
     } else if (val->type == CBOR_TYPE_TAG) {
         cbor_destroy(val->tag.content);
         val->tag.content = NULL;
@@ -599,7 +599,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                         offset += remain;
                         cbor_value_t *pair = cbor_create(CBOR__TYPE_PAIR);
                         pair->pair.key = k;
-                        pair->pair.val = v;
+                        pair->pair.value = v;
                         cbor_container_insert_tail(val, pair);
                     } else {
                         /* error */
@@ -631,7 +631,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
                         offset += remain;
                         cbor_value_t *pair = cbor_create(CBOR__TYPE_PAIR);
                         pair->pair.key = k;
-                        pair->pair.val = v;
+                        pair->pair.value = v;
                         cbor_container_insert_tail(val, pair);
                         len--;
                     } else {
@@ -901,7 +901,7 @@ int cbor__dumps(const cbor_value_t *src, cbor_value_t *dst) {
              var != NULL;
              var = cbor_container_next(src, var)) {
             cbor__dumps(var->pair.key, dst);
-            cbor__dumps(var->pair.val, dst);
+            cbor__dumps(var->pair.value, dst);
         }
         break;
     }
@@ -1341,7 +1341,7 @@ cbor_value_t *cbor_duplicate(const cbor_value_t *val) {
         break;
     }
     case CBOR__TYPE_PAIR: {
-        dup = cbor_init_pair(cbor_duplicate(val->pair.key), cbor_duplicate(val->pair.val));
+        dup = cbor_init_pair(cbor_duplicate(val->pair.key), cbor_duplicate(val->pair.value));
         break;
     }
     }
@@ -1355,7 +1355,7 @@ cbor_value_t *cbor_init_pair(cbor_value_t *key, cbor_value_t *val) {
     assert(val->entry.le_next == NULL && val->entry.le_prev == NULL);
     cbor_value_t *p = cbor_create(CBOR__TYPE_PAIR);
     p->pair.key = key;
-    p->pair.val = val;
+    p->pair.value = val;
     key->parent = p;
     val->parent = p;
     return p;
@@ -1370,7 +1370,7 @@ cbor_value_t *cbor_pair_key(const cbor_value_t *val) {
 
 cbor_value_t *cbor_pair_value(const cbor_value_t *val) {
     if (val && val->type == CBOR__TYPE_PAIR) {
-        return val->pair.val;
+        return val->pair.value;
     }
     return NULL;
 }

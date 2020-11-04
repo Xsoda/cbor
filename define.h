@@ -37,7 +37,7 @@ struct _cbor_value {
         } blob;
         struct {
             struct _cbor_value *key;
-            struct _cbor_value *val;
+            struct _cbor_value *value;
         } pair;
         struct {
             unsigned long long item;

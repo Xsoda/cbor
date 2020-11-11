@@ -9,7 +9,6 @@
 #include "define.h"
 #include "fastsearch.h"
 
-
 cbor_value_t *cbor_create(cbor_type type) {
     cbor_value_t *val = (cbor_value_t *)malloc(sizeof(cbor_value_t));
     memset(val, 0, sizeof(cbor_value_t));

@@ -61,10 +61,11 @@ bool cbor_value_test(const cbor_value_t *va, const cbor_value_t *vb) {
 }
 
 /* return: destination value */
-cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *path) {
+cbor_value_t *cbor_pointer_get(const cbor_value_t *container, const char *path) {
     cbor_iter_t iter;
     cbor_value_t *ele;
-    cbor_value_t *current = NULL;
+    const cbor_value_t *current = NULL;
+    cbor_value_t *next = NULL;
     cbor_value_t *split = cbor_string_split(path, "/");
 
     cbor_iter_init(&iter, split, CBOR_ITER_AFTER);
@@ -85,12 +86,14 @@ cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *path) {
                     }
                 }
                 if (find) {
-                    current = cbor_pair_value(find);
+                    next = cbor_pair_value(find);
+                    current = next;
                     continue;
                 }
             } else if (cbor_is_array(current)) {
                 if (!strcmp(cbor_string(ele), "-")) {
-                    current = cbor_container_last(current);
+                    next = cbor_container_last(current);
+                    current = next;
                     continue;
                 } else {
                     char *end;
@@ -101,18 +104,19 @@ cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *path) {
                             val = cbor_container_next(current, val);
                         }
                         if (val) {
-                            current = val;
+                            next = val;
+                            current = next;
                             continue;
                         }
                     }
                 }
             }
-            current = NULL;
+            next = NULL;
             break;
         }
     }
     cbor_destroy(split);
-    return current;
+    return next;
 }
 
 /* return: removed value */
@@ -586,22 +590,22 @@ int cbor_pointer_setv(cbor_value_t *container, const char *path, cbor_value_t *v
     return -1;
 }
 
-long long cbor_pointer_geti(cbor_value_t *container, const char *path) {
+long long cbor_pointer_geti(const cbor_value_t *container, const char *path) {
     cbor_value_t *val = cbor_pointer_get(container, path);
     return cbor_integer(val);
 }
 
-const char *cbor_pointer_gets(cbor_value_t *container, const char *path) {
+const char *cbor_pointer_gets(const cbor_value_t *container, const char *path) {
     cbor_value_t *val = cbor_pointer_get(container, path);
     return cbor_string(val);
 }
 
-bool cbor_pointer_getb(cbor_value_t *container, const char *path) {
+bool cbor_pointer_getb(const cbor_value_t *container, const char *path) {
     cbor_value_t *val = cbor_pointer_get(container, path);
     return cbor_string(val);
 }
 
-double cbor_pointer_getf(cbor_value_t *container, const char *path) {
+double cbor_pointer_getf(const cbor_value_t *container, const char *path) {
     cbor_value_t *val = cbor_pointer_get(container, path);
     return cbor_real(val);
 }

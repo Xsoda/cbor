@@ -129,6 +129,7 @@ cbor_value_t *cbor_duplicate(const cbor_value_t *val);
 void cbor_iter_init(cbor_iter_t *iter, const cbor_value_t *container, cbor_iter_dir dir);
 cbor_value_t *cbor_iter_next(cbor_iter_t *iter);
 
+cbor_value_t *cbor_get_parent(cbor_value_t *val);
 long cbor_tag_get_item(cbor_value_t *val);
 cbor_value_t *cbor_tag_get_content(cbor_value_t *val);
 int cbor_tag_set(cbor_value_t *tag, long item, cbor_value_t *content);

@@ -1543,3 +1543,10 @@ int cbor_string_replace(cbor_value_t *str, const char *find, const char *repl) {
     } while (size >= 0);
     return cbor_string_size(str);
 }
+
+cbor_value_t *cbor_get_parent(cbor_value_t *val) {
+    if (val) {
+        return val->parent;
+    }
+    return NULL;
+}

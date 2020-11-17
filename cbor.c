@@ -3,13 +3,14 @@
 #include <assert.h>
 #include <ctype.h>
 #include <math.h>
-#include <stdint.h>
 #include <float.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include "define.h"
 #include "fastsearch.h"
+#ifdef __FreeBSD__
 #include <sys/endian.h>
+#endif
 
 cbor_value_t *cbor_create(cbor_type type) {
     cbor_value_t *val = (cbor_value_t *)malloc(sizeof(cbor_value_t));

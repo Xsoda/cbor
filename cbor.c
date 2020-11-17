@@ -27,6 +27,8 @@ int cbor_destroy(cbor_value_t *val) {
         return -1;
     }
 
+    assert(val->parent == NULL);
+
     if (val->type == CBOR_TYPE_ARRAY || val->type == CBOR_TYPE_MAP) {
         cbor_value_t *var, *tvar;
         list_foreach_safe(var, &val->container, entry, tvar) {

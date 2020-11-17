@@ -621,9 +621,12 @@ int cbor_pointer_seta(cbor_value_t *container, const char *path) {
 }
 
 int cbor_pointer_setv(cbor_value_t *container, const char *path, cbor_value_t *val) {
+    if (!container || !path || !val) {
+        return -1;
+    }
     assert(container->type == CBOR_TYPE_MAP || container->type == CBOR_TYPE_ARRAY);
+    assert(path[0] == '/');
     assert(val->parent == NULL);
-    assert(path != NULL && path[0] == '/');
     if (cbor_pointer_add(container, path, val)) {
         return 0;
     }

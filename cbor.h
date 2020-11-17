@@ -101,7 +101,7 @@ cbor_value_t *cbor_container_remove(cbor_value_t *container, cbor_value_t *elm);
 
 int cbor_container_concat(cbor_value_t *dst, cbor_value_t *src);
 
-cbor_value_t *cbor_pointer_get(cbor_value_t *container, const char *path);
+cbor_value_t *cbor_pointer_get(const cbor_value_t *container, const char *path);
 cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_value_t *value);
 cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *path);
 cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const char *path);
@@ -119,16 +119,17 @@ int cbor_pointer_setn(cbor_value_t *container, const char *path);
 int cbor_pointer_sets(cbor_value_t *container, const char *path, const char *str);
 int cbor_pointer_setv(cbor_value_t *container, const char *path, cbor_value_t *val);
 
-long long cbor_pointer_geti(cbor_value_t *container, const char *path);
-const char *cbor_pointer_gets(cbor_value_t *container, const char *path);
-bool cbor_pointer_getb(cbor_value_t *container, const char *path);
-double cbor_pointer_getf(cbor_value_t *container, const char *path);
+long long cbor_pointer_geti(const cbor_value_t *container, const char *path);
+const char *cbor_pointer_gets(const cbor_value_t *container, const char *path);
+bool cbor_pointer_getb(const cbor_value_t *container, const char *path);
+double cbor_pointer_getf(const cbor_value_t *container, const char *path);
 
 cbor_value_t *cbor_duplicate(const cbor_value_t *val);
 
 void cbor_iter_init(cbor_iter_t *iter, const cbor_value_t *container, cbor_iter_dir dir);
 cbor_value_t *cbor_iter_next(cbor_iter_t *iter);
 
+cbor_value_t *cbor_get_parent(cbor_value_t *val);
 long cbor_tag_get_item(cbor_value_t *val);
 cbor_value_t *cbor_tag_get_content(cbor_value_t *val);
 int cbor_tag_set(cbor_value_t *tag, long item, cbor_value_t *content);

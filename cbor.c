@@ -9,7 +9,6 @@
 #include "define.h"
 #include "fastsearch.h"
 
-
 cbor_value_t *cbor_create(cbor_type type) {
     cbor_value_t *val = (cbor_value_t *)malloc(sizeof(cbor_value_t));
     memset(val, 0, sizeof(cbor_value_t));
@@ -28,6 +27,8 @@ int cbor_destroy(cbor_value_t *val) {
         return -1;
     }
 
+    assert(val->parent == NULL);
+
     if (val->type == CBOR_TYPE_ARRAY || val->type == CBOR_TYPE_MAP) {
         cbor_value_t *var, *tvar;
         list_foreach_safe(var, &val->container, entry, tvar) {
@@ -38,10 +39,14 @@ int cbor_destroy(cbor_value_t *val) {
         free(val->blob.ptr);
         val->blob.ptr = NULL;
     } else if (val->type == CBOR__TYPE_PAIR) {
-        cbor_destroy(val->pair.key);
-        val->pair.key = NULL;
-        cbor_destroy(val->pair.value);
-        val->pair.value = NULL;
+        if (val->pair.key) {
+            val->pair.key->parent = NULL;
+            cbor_destroy(val->pair.key);
+        }
+        if (val->pair.value) {
+            val->pair.value->parent = NULL;
+            cbor_destroy(val->pair.value);
+        }
     } else if (val->type == CBOR_TYPE_TAG) {
         cbor_destroy(val->tag.content);
         val->tag.content = NULL;
@@ -1159,12 +1164,15 @@ cbor_value_t *cbor_tag_get_content(cbor_value_t *val) {
 }
 
 int cbor_tag_set(cbor_value_t *val, long item, cbor_value_t *content) {
+    assert(content->parent == NULL);
     if (val && val->type == CBOR_TYPE_TAG) {
         if (val->tag.content) {
+            val->tag.content->parent = NULL;
             cbor_destroy(val->tag.content);
         }
         val->tag.item = item;
         val->tag.content = content;
+        content->parent = val;
     }
     return 0;
 }
@@ -1542,4 +1550,11 @@ int cbor_string_replace(cbor_value_t *str, const char *find, const char *repl) {
         }
     } while (size >= 0);
     return cbor_string_size(str);
+}
+
+cbor_value_t *cbor_get_parent(cbor_value_t *val) {
+    if (val) {
+        return val->parent;
+    }
+    return NULL;
 }

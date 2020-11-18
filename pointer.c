@@ -4,44 +4,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-cbor_value_t *cbor_pair_unset_value(cbor_value_t *val) {
-    assert(val->type == CBOR__TYPE_PAIR);
-    cbor_value_t *tmp = val->pair.value;
-    if (tmp) {
-        tmp->parent = NULL;
-    }
-    val->pair.value = NULL;
-    return tmp;
-}
-
-cbor_value_t *cbor_pair_unset_key(cbor_value_t *val) {
-    assert(val->type == CBOR__TYPE_PAIR);
-    cbor_value_t *tmp = val->pair.key;
-    if (tmp) {
-        tmp->parent = NULL;
-    }
-    val->pair.key = NULL;
-    return tmp;
-}
-
-void cbor_pair_reset_value(cbor_value_t *pair, cbor_value_t *val) {
-    assert(val != NULL && val->parent == NULL);
-    assert(pair->type == CBOR__TYPE_PAIR && val->type != CBOR__TYPE_PAIR);
-    cbor_value_t *tmp = cbor_pair_unset_value(pair);
-    pair->pair.value = val;
-    val->parent = pair;
-    cbor_destroy(tmp);
-}
-
-void cbor_pair_reset_key(cbor_value_t *pair, cbor_value_t *key) {
-    assert(key != NULL && key->parent == NULL);
-    assert(pair->type == CBOR__TYPE_PAIR && key->type == CBOR_TYPE_STRING);
-    cbor_value_t *tmp = cbor_pair_unset_key(pair);
-    pair->pair.key = key;
-    key->parent = pair;
-    cbor_destroy(tmp);
-}
-
 bool cbor_value_test(const cbor_value_t *va, const cbor_value_t *vb) {
     if (va == NULL || vb == NULL) {
         return false;

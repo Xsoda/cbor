@@ -82,6 +82,11 @@ bool cbor_is_number(const cbor_value_t *val);
 
 cbor_value_t *cbor_pair_key(const cbor_value_t *val);
 cbor_value_t *cbor_pair_value(const cbor_value_t *val);
+cbor_value_t *cbor_pair_unset_key(cbor_value_t *val);
+cbor_value_t *cbor_pair_unset_value(cbor_value_t *val);
+void cbor_pair_reset_key(cbor_value_t *val, cbor_value_t *key);
+void cbor_pair_reset_value(cbor_value_t *val, cbor_value_t *value);
+
 cbor_value_t *cbor_init_boolean(bool b);
 cbor_value_t *cbor_init_null();
 cbor_value_t *cbor_init_map();
@@ -91,7 +96,7 @@ cbor_value_t *cbor_init_string(const char *str, int len);
 cbor_value_t *cbor_init_double(double d);
 cbor_value_t *cbor_init_bytestring(const char *str, int len);
 cbor_value_t *cbor_init_pair(cbor_value_t *key, cbor_value_t *val);
-
+cbor_value_t *cbor_init_tag(long item, cbor_value_t *content);
 
 cbor_value_t *cbor_container_first(const cbor_value_t *container);
 cbor_value_t *cbor_container_last(const cbor_value_t *container);
@@ -130,9 +135,12 @@ void cbor_iter_init(cbor_iter_t *iter, const cbor_value_t *container, cbor_iter_
 cbor_value_t *cbor_iter_next(cbor_iter_t *iter);
 
 cbor_value_t *cbor_get_parent(cbor_value_t *val);
+
+void cbor_tag_reset_item(cbor_value_t *val, long item);
+cbor_value_t *cbor_tag_unset_content(cbor_value_t *val);
+void cbor_tag_reset_content(cbor_value_t *val, cbor_value_t *content);
 long cbor_tag_get_item(cbor_value_t *val);
 cbor_value_t *cbor_tag_get_content(cbor_value_t *val);
-int cbor_tag_set(cbor_value_t *tag, long item, cbor_value_t *content);
 
 cbor_value_t *cbor_loads(const char *src, size_t *length);
 char *cbor_dumps(const cbor_value_t *src, size_t *length);

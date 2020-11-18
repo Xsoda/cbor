@@ -42,17 +42,14 @@ int cbor_destroy(cbor_value_t *val) {
         free(val->blob.ptr);
         val->blob.ptr = NULL;
     } else if (val->type == CBOR__TYPE_PAIR) {
-        if (val->pair.key) {
-            val->pair.key->parent = NULL;
-            cbor_destroy(val->pair.key);
-        }
-        if (val->pair.value) {
-            val->pair.value->parent = NULL;
-            cbor_destroy(val->pair.value);
-        }
+        cbor_value_t *var;
+        var = cbor_pair_unset_key(val);
+        cbor_destroy(var);
+        var = cbor_pair_unset_value(val);
+        cbor_destroy(var);
     } else if (val->type == CBOR_TYPE_TAG) {
-        cbor_destroy(val->tag.content);
-        val->tag.content = NULL;
+        cbor_value_t *var = cbor_tag_unset_content(val);
+        cbor_destroy(var);
     }
     free(val);
     return 0;
@@ -1152,6 +1149,31 @@ bool cbor_boolean(const cbor_value_t *val) {
     return false;
 }
 
+cbor_value_t *cbor_tag_unset_content(cbor_value_t *val) {
+    assert(val != NULL && val->type == CBOR_TYPE_TAG);
+    cbor_value_t *tmp = val->tag.content;
+    if (tmp) {
+        tmp->parent = NULL;
+    }
+    val->tag.content = NULL;
+    return tmp;
+}
+
+void cbor_tag_reset_content(cbor_value_t *val, cbor_value_t *content) {
+    assert(content == NULL || (content != NULL && val->parent == NULL));
+    cbor_value_t *tmp = cbor_tag_unset_content(val);
+    val->tag.content = content;
+    if (content) {
+        content->parent = val;
+    }
+    cbor_destroy(tmp);
+}
+
+void cbor_tag_reset_item(cbor_value_t *val, long item) {
+    assert(val != NULL && val->type == CBOR_TYPE_TAG);
+    val->tag.item = item;
+}
+
 long cbor_tag_get_item(cbor_value_t *val) {
     if (val && val->type == CBOR_TYPE_TAG) {
         return val->tag.item;
@@ -1164,20 +1186,6 @@ cbor_value_t *cbor_tag_get_content(cbor_value_t *val) {
         return val->tag.content;
     }
     return NULL;
-}
-
-int cbor_tag_set(cbor_value_t *val, long item, cbor_value_t *content) {
-    assert(content->parent == NULL);
-    if (val && val->type == CBOR_TYPE_TAG) {
-        if (val->tag.content) {
-            val->tag.content->parent = NULL;
-            cbor_destroy(val->tag.content);
-        }
-        val->tag.item = item;
-        val->tag.content = content;
-        content->parent = val;
-    }
-    return 0;
 }
 
 bool cbor_is_boolean(const cbor_value_t *val) {
@@ -1384,6 +1392,46 @@ cbor_value_t *cbor_pair_value(const cbor_value_t *val) {
         return val->pair.value;
     }
     return NULL;
+}
+
+cbor_value_t *cbor_pair_unset_key(cbor_value_t *val) {
+    assert(val != NULL && val->type == CBOR__TYPE_PAIR);
+    cbor_value_t *tmp = val->pair.key;
+    if (tmp) {
+        tmp->parent = NULL;
+    }
+    val->pair.key = NULL;
+    return tmp;
+}
+
+cbor_value_t *cbor_pair_unset_value(cbor_value_t *val) {
+    assert(val != NULL && val->type == CBOR__TYPE_PAIR);
+    cbor_value_t *tmp = val->pair.value;
+    if (tmp) {
+        tmp->parent = NULL;
+    }
+    val->pair.value = NULL;
+    return tmp;
+}
+
+void cbor_pair_reset_key(cbor_value_t *val, cbor_value_t *key) {
+    assert(key == NULL || (key != NULL && key->parent == NULL));
+    cbor_value_t *tmp = cbor_pair_unset_key(val);
+    val->pair.key = key;
+    if (key) {
+        key->parent = val;
+    }
+    cbor_destroy(tmp);
+}
+
+void cbor_pair_reset_value(cbor_value_t *val, cbor_value_t *value) {
+    assert(value == NULL || (value != NULL && value->parent == NULL));
+    cbor_value_t *tmp = cbor_pair_unset_value(val);
+    val->pair.value = value;
+    if (value) {
+        value->parent = val;
+    }
+    cbor_destroy(tmp);
 }
 
 const char *cbor_type_str(const cbor_value_t *val) {

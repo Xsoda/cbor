@@ -158,6 +158,11 @@ cbor_value_t *cbor_string_split_whitespace(const char *str);
 cbor_value_t *cbor_string_split_character(const char *str, int length, const char *characters, int size);
 cbor_value_t *cbor_string_join(cbor_value_t *array, const char *join);
 int cbor_string_replace(cbor_value_t *str, const char *find, const char *replace);
+bool cbor_string_startswith(cbor_value_t *str, const char *first);
+bool cbor_string_endswith(cbor_value_t *str, const char *last);
+int cbor_string_strip(cbor_value_t *str);
+int cbor_string_rstrip(cbor_value_t *str);
+int cbor_string_lstrip(cbor_value_t *str);
 
 #ifdef __cplusplus
 }

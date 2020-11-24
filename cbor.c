@@ -1603,6 +1603,123 @@ int cbor_string_replace(cbor_value_t *str, const char *find, const char *repl) {
     return cbor_string_size(str);
 }
 
+bool cbor_string_startswith(cbor_value_t *str, const char *first) {
+    if (first == NULL || !cbor_is_string(str))
+        return false;
+    int len = strlen(first);
+    if (len > cbor_string_size(str)) {
+        return false;
+    }
+    return memcmp(cbor_string(str), first, len) == 0;
+}
+
+bool cbor_string_endswith(cbor_value_t *str, const char *last) {
+    if (last == NULL || !cbor_is_string(str))
+        return false;
+    int len = strlen(last);
+    if (len > cbor_string_size(str))
+        return false;
+    return memcmp(cbor_string(str) + cbor_string_size(str) - len, last, len) == 0;
+}
+
+int cbor_string_strip(cbor_value_t *str) {
+    int loff, roff, i, size;
+    if (!cbor_is_string(str)) {
+        return 0;
+    }
+
+    loff = 0;
+    size = cbor_string_size(str);
+    for (i = 0; i < size; i++) {
+        if (isspace((unsigned char)str->blob.ptr[i])) {
+            loff += 1;
+        } else {
+            break;
+        }
+    }
+
+    roff = 0;
+    for (i = size - 1; i >= 0; i--) {
+        if (isspace((unsigned char)str->blob.ptr[i])) {
+            roff += 1;
+        } else {
+            break;
+        }
+    }
+
+    size -= loff;
+    size -= roff;
+
+    if (size <= 0) {
+        str->blob.ptr[0] = 0;
+        str->blob.length = 0;
+    } else {
+        memmove(str->blob.ptr, str->blob.ptr + loff, size);
+        str->blob.ptr[size] = 0;
+        str->blob.length = size;
+    }
+    return cbor_string_size(str);
+}
+
+int cbor_string_lstrip(cbor_value_t *str) {
+    int loff, i, size;
+    if (!cbor_is_string(str)) {
+        return 0;
+    }
+
+    loff = 0;
+    size = cbor_string_size(str);
+    for (i = 0; i < size; i++) {
+        if (isspace((unsigned char)str->blob.ptr[i])) {
+            loff += 1;
+        } else {
+            break;
+        }
+    }
+
+    size -= loff;
+    if (loff > 0) {
+        if (size > 0) {
+            memmove(str->blob.ptr, str->blob.ptr + loff, size);
+            str->blob.ptr[size] = 0;
+            str->blob.length = size;
+        } else {
+            str->blob.ptr[0] = 0;
+            str->blob.length = 0;
+        }
+    }
+    return cbor_string_size(str);
+}
+
+int cbor_string_rstrip(cbor_value_t *str) {
+    int roff, i, size;
+    if (!cbor_is_string(str)) {
+        return 0;
+    }
+
+    roff = 0;
+    size = cbor_string_size(str);
+    for (i = size - 1; i >= 0; i--) {
+        if (isspace((unsigned char)str->blob.ptr[i])) {
+            roff += 1;
+        } else {
+            break;
+        }
+    }
+
+    size -= roff;
+    if (roff > 0) {
+        if (size > 0) {
+            str->blob.ptr[size] = 0;
+            str->blob.length = size;
+        } else {
+            str->blob.ptr[0] = 0;
+            str->blob.length = 0;
+        }
+    }
+    return cbor_string_size(str);
+}
+
 cbor_value_t *cbor_get_parent(cbor_value_t *val) {
     if (val) {
         return val->parent;

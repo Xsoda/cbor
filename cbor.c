@@ -187,7 +187,8 @@ int cbor_container_clear(cbor_value_t *container) {
     if (container->type == CBOR_TYPE_ARRAY || container->type == CBOR_TYPE_MAP) {
         cbor_value_t *var, *tvar;
         list_foreach_safe(var, &container->container, entry, tvar) {
-            cbor_container_remove(container, var);
+            list_remove(&container->container, var, entry);
+            var->parent = NULL;
             cbor_destroy(var);
         }
     }

@@ -163,6 +163,8 @@ bool cbor_string_endswith(cbor_value_t *str, const char *last);
 int cbor_string_strip(cbor_value_t *str);
 int cbor_string_rstrip(cbor_value_t *str);
 int cbor_string_lstrip(cbor_value_t *str);
+int cbor_string_find(const char *str, int len, const char *find, int count);
+int cbor_string_rfind(const char *str, int len, const char *find, int count);
 
 #ifdef __cplusplus
 }

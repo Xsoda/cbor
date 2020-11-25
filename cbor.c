@@ -1726,3 +1726,23 @@ cbor_value_t *cbor_get_parent(cbor_value_t *val) {
     }
     return NULL;
 }
+
+int cbor_string_find(const char *str, int len, const char *find, int count) {
+    int m, off;
+    if (len <= 0) {
+        len = strlen(str);
+    }
+    m = strlen(find);
+    off = FASTSEARCH(str, len, find, m, count, FAST_SEARCH);
+    return off;
+}
+
+int cbor_string_rfind(const char *str, int len, const char *find, int count) {
+    int m, off;
+    if (len <= 0) {
+        len = strlen(str);
+    }
+    m = strlen(find);
+    off = FASTSEARCH(str, len, find, m, count, FAST_RSEARCH);
+    return off;
+}

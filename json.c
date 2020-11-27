@@ -95,21 +95,16 @@ static void lexer_skip_block_comment(lexer_t *lexer) {
 static void lexer_skip_whitespace(lexer_t *lexer) {
     while (lexer->cursor < lexer->eof) {
         int ch = (unsigned char)*lexer->cursor;
-        if (ch == '\r') {
+        if (ch == '\r' && lexer->cursor[1] == '\n') {
+            lexer->linum++;
+            lexer->cursor += 2;
+            lexer->linoff = 0;
+            lexer->linst = lexer->cursor;
+        } else if (ch == '\r' || ch == '\n') {
             lexer->linum++;
             lexer->cursor++;
             lexer->linoff = 0;
             lexer->linst = lexer->cursor;
-        } else if (ch == '\n') {
-            int prev = lexer->cursor[-1];
-            if (prev != '\r' && lexer->cursor > lexer->source) {
-                lexer->linum++;
-                lexer->cursor++;
-                lexer->linoff = 0;
-                lexer->linst = lexer->cursor;
-            } else {
-                lexer->cursor++;
-            }
         } else if (isspace(ch)) {
             lexer->cursor++;
             lexer->linoff++;

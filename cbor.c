@@ -1463,11 +1463,16 @@ const char *cbor_type_str(const cbor_value_t *val) {
 }
 
 cbor_value_t *cbor_string_split(const char *str, const char *f) {
+    return cbor_string_splitl(str, -1, f);
+}
+
+cbor_value_t *cbor_string_splitl(const char *str, int l, const char *f) {
     if (!str || !f) {
         return NULL;
     }
-
-    int l = strlen(str);
+    if (l < 0) {
+        l = strlen(str);
+    }
     int m = strlen(f);
 
     int size;

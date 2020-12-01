@@ -153,6 +153,7 @@ cbor_value_t *cbor_json_loadf(const char *path);
 int cbor_json_dumpf(cbor_value_t *val, const char *path, bool pretty);
 
 cbor_value_t *cbor_string_split(const char *str, const char *f);
+cbor_value_t *cbor_string_splitl(const char *str, int l, const char *f);
 cbor_value_t *cbor_string_split_linebreak(const char *str);
 cbor_value_t *cbor_string_split_whitespace(const char *str);
 cbor_value_t *cbor_string_split_character(const char *str, int length, const char *characters, int size);

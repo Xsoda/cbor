@@ -1463,10 +1463,10 @@ const char *cbor_type_str(const cbor_value_t *val) {
 }
 
 cbor_value_t *cbor_string_split(const char *str, const char *f) {
-    return cbor_string_splitl(str, -1, f);
+    return cbor_string_splitn(str, -1, f);
 }
 
-cbor_value_t *cbor_string_splitl(const char *str, int l, const char *f) {
+cbor_value_t *cbor_string_splitn(const char *str, int l, const char *f) {
     if (!str || !f) {
         return NULL;
     }
@@ -1507,7 +1507,9 @@ cbor_value_t *cbor_string_join(cbor_value_t *array, const char *str) {
             if (cbor_is_string(ele)) {
                 cbor_blob_append(result, cbor_string(ele), cbor_string_size(ele));
             }
-            cbor_blob_append(result, str, len);
+            if (iter.next != NULL) {
+                cbor_blob_append(result, str, len);
+            }
         }
         return result;
     }

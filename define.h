@@ -3,6 +3,16 @@
 
 #include "list.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#define htobe16(x) htons(x)
+#define htobe32(x) htonl(x)
+#define htobe64(x) htonll(x)
+#define be16toh(x) ntohs(x)
+#define be32toh(x) ntohl(x)
+#define be64toh(x) ntohll(x)
+#endif
+
 /* Major Types */
 typedef enum {
     CBOR_TYPE_UINT = 0,

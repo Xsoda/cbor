@@ -719,7 +719,7 @@ cbor_value_t *cbor_json_loads_ex(const void *src, int size, int flag, int *consu
     if (size < 0) {
         size = strlen(src);
     }
-    lexer.eof = src + size;
+    lexer.eof = lexer.source + size;
     lexer.cursor = lexer.source;
     lexer.linst = lexer.source;
     lexer.linum = 1;

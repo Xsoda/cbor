@@ -3,6 +3,10 @@
 
 #include "list.h"
 
+#ifdef __FreeBSD__
+#include <sys/endian.h>
+#endif
+
 #ifdef _WIN32
 #include <winsock2.h>
 #define htobe16(x) htons(x)
@@ -11,6 +15,8 @@
 #define be16toh(x) ntohs(x)
 #define be32toh(x) ntohl(x)
 #define be64toh(x) ntohll(x)
+#define strncasecmp(s, u, l) strnicmp(s, u, l)
+#define strcasecmp(s, u) stricmp(s, u)
 #endif
 
 /* Major Types */

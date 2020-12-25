@@ -696,7 +696,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
         offset++;
         if (addition < 20) {
             val->simple.ctrl = addition;
-            /* assert(("simple value is unassigned", 0)); */
+            assert(false && "simple value is unassigned");
         } else if (addition == 20) {   /* False */
             val->simple.ctrl = CBOR_SIMPLE_FALSE;
         } else if (addition == 21) { /* True */
@@ -768,7 +768,7 @@ cbor_value_t *cbor_loads(const char *src, size_t *length) {
             offset += 8;
             val->simple.real = var.dbl;
         } else {
-            assert(("simple value is unassigned", 0));
+            assert(false && "simple value is unassigned");
         }
         break;
     }

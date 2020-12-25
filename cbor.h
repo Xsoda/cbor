@@ -106,6 +106,7 @@ cbor_value_t *cbor_container_remove(cbor_value_t *container, cbor_value_t *elm);
 
 int cbor_container_concat(cbor_value_t *dst, cbor_value_t *src);
 
+/* JSON Pointer ref: https://tools.ietf.org/html/rfc6901 */
 cbor_value_t *cbor_pointer_get(const cbor_value_t *container, const char *path);
 cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_value_t *value);
 cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *path);
@@ -142,9 +143,11 @@ void cbor_tag_reset_content(cbor_value_t *val, cbor_value_t *content);
 long cbor_tag_get_item(cbor_value_t *val);
 cbor_value_t *cbor_tag_get_content(cbor_value_t *val);
 
+/* CBOR ref: https://tools.ietf.org/html/rfc7049 */
 cbor_value_t *cbor_loads(const char *src, size_t *length);
 char *cbor_dumps(const cbor_value_t *src, size_t *length);
 
+/* JSON ref: https://tools.ietf.org/html/rfc7159 */
 cbor_value_t *cbor_json_loads_ex(const void *src, int size, int flag, int *consume);
 cbor_value_t *cbor_json_loads(const void *src, int size);
 char *cbor_json_dumps(const cbor_value_t *src, size_t *length, bool pretty);

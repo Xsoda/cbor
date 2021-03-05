@@ -1751,3 +1751,19 @@ int cbor_string_rfind(const char *str, int len, const char *find, int count) {
     off = FASTSEARCH(str, len, find, m, count, FAST_RSEARCH);
     return off;
 }
+
+int cbor_string_slice(cbor_value_t *str, int start, int stop) {
+    assert(start >= 0 && str && cbor_is_string(str));
+    if (stop < 0) {
+        stop += cbor_string_size(str);
+    }
+    if (start > stop) {
+        return -1;
+    }
+    str->blob.length = stop - start + 1;
+    if (start > 0) {
+        memmove(str->blob.ptr, str->blob.ptr + start, str->blob.length);
+    }
+    str->blob.ptr[str->blob.length] = 0;
+    return 0;
+}

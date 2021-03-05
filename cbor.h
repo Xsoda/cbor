@@ -169,6 +169,7 @@ int cbor_string_rstrip(cbor_value_t *str);
 int cbor_string_lstrip(cbor_value_t *str);
 int cbor_string_find(const char *str, int len, const char *find, int count);
 int cbor_string_rfind(const char *str, int len, const char *find, int count);
+int cbor_string_slice(cbor_value_t *str, int start, int stop);
 
 #ifdef __cplusplus
 }

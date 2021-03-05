@@ -547,6 +547,13 @@ int test_json_pointer() {
 
 int main(int argc, char **argv) {
     size_t length;
+    cbor_value_t *str = cbor_init_string("abcdefg", -1);
+    cbor_string_slice(str, 0, -1);
+    printf("str[0:-1]: %s\n", cbor_string(str));
+    cbor_string_slice(str, 0, 5);
+    printf("str[0:5]: %s\n", cbor_string(str));
+    cbor_string_slice(str, 2, 3);
+    printf("str[2:3]: %s\n", cbor_string(str));
     for (int i = 0; content[i] != NULL; i++) {
         printf("start load %d %s\n", i, describe[i]);
         length = len[i];

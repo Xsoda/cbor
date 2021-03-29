@@ -495,6 +495,7 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
 
 /* return: copyed value */
 cbor_value_t *cbor_pointer_copy(cbor_value_t *container, const char *from, const char *path) {
+    assert(from != NULL && path != NULL && from[0] == '/' && path[0] == '/');
     cbor_value_t *value = cbor_pointer_get(container, from);
     if (value) {
         cbor_value_t *copy = cbor_duplicate(value);
@@ -534,6 +535,9 @@ int cbor_pointer_setb(cbor_value_t *container, const char *path, bool boolean) {
 
 int cbor_pointer_sets(cbor_value_t *container, const char *path, const char *str) {
     assert(path != NULL && path[0] == '/');
+    if (str == NULL) {
+        str = "";
+    }
     cbor_value_t *val = cbor_init_string(str, -1);
     if (cbor_pointer_add(container, path, val)) {
         return 0;

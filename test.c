@@ -180,7 +180,6 @@
 
 */
 #define _BSD_SOURCE
-#include <endian.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

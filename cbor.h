@@ -169,6 +169,13 @@ int cbor_string_rstrip(cbor_value_t *str);
 int cbor_string_lstrip(cbor_value_t *str);
 int cbor_string_find(const char *str, int len, const char *find, int count);
 int cbor_string_rfind(const char *str, int len, const char *find, int count);
+
+/* string slice:
+ *   include `start` and `stop` character, start must greate equal 0, e.g.:
+ *     slice("abcde", 0, -1) => "abcde"
+ *     slice("abcde", 0, -2) => "abcd"
+ *     slice("abcde", 0,  1) => "ab"
+ */
 int cbor_string_slice(cbor_value_t *str, int start, int stop);
 
 #ifdef __cplusplus

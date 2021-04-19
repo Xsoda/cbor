@@ -1608,23 +1608,30 @@ int cbor_string_replace(cbor_value_t *str, const char *find, const char *repl) {
     return cbor_string_size(str);
 }
 
-bool cbor_string_startswith(cbor_value_t *str, const char *first) {
-    if (first == NULL || !cbor_is_string(str))
+bool cbor_string_startswith(const char *str, int length, const char *first) {
+    if (first == NULL || str == NULL)
         return false;
+    if (length < 0) {
+        length = strlen(str);
+    }
     int len = strlen(first);
-    if (len > cbor_string_size(str)) {
+    if (len > length) {
         return false;
     }
-    return memcmp(cbor_string(str), first, len) == 0;
+    return memcmp(str, first, len) == 0;
 }
 
-bool cbor_string_endswith(cbor_value_t *str, const char *last) {
-    if (last == NULL || !cbor_is_string(str))
+bool cbor_string_endswith(const char *str, int length, const char *last) {
+    if (last == NULL || str == NULL)
         return false;
+    if (length < 0) {
+        length = strlen(str);
+    }
     int len = strlen(last);
-    if (len > cbor_string_size(str))
+    if (len > length) {
         return false;
-    return memcmp(cbor_string(str) + cbor_string_size(str) - len, last, len) == 0;
+    }
+    return memcmp(str + length - len, last, len) == 0;
 }
 
 int cbor_string_strip(cbor_value_t *str) {

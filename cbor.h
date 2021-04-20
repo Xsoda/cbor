@@ -50,19 +50,6 @@ int cbor_container_insert_head(cbor_value_t *container, cbor_value_t *val);
 int cbor_container_insert_after(cbor_value_t *container, cbor_value_t *elm, cbor_value_t *val);
 int cbor_container_insert_before(cbor_value_t *container, cbor_value_t *elm, cbor_value_t *val);
 
-int cbor_map_insert(cbor_value_t *map, cbor_value_t *key, cbor_value_t *val);
-int cbor_map_destroy(cbor_value_t *map, const char *key);
-int cbor_map_set_integer(cbor_value_t *map, const char *key, long long integer);
-int cbor_map_set_double(cbor_value_t *map, const char *key, double dbl);
-int cbor_map_set_boolean(cbor_value_t *map, const char *key, bool boolean);
-int cbor_map_set_string(cbor_value_t *map, const char *key, const char *str);
-int cbor_map_set_null(cbor_value_t *map, const char *key);
-int cbor_map_set_value(cbor_value_t *map, const char *key, cbor_value_t *value);
-
-cbor_value_t *cbor_map_find(const cbor_value_t *map, const char *key, size_t len);
-cbor_value_t *cbor_map_unlink(cbor_value_t *map, const char *key);
-cbor_value_t *cbor_map_remove(cbor_value_t *map, const char *key);
-
 long long cbor_integer(const cbor_value_t *val);
 double cbor_real(const cbor_value_t *val);
 int cbor_string_size(const cbor_value_t *val);

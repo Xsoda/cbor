@@ -4,6 +4,36 @@
 #include <string.h>
 #include <stdarg.h>
 
+int cbor_pair_swap_value(cbor_value_t *pair, cbor_value_t **val) {
+    assert(val != NULL && (*val == NULL || (*val != NULL && (*val)->parent == NULL)));
+    assert(pair != NULL && pair->type == CBOR__TYPE_PAIR);
+    cbor_value_t *tmp = pair->pair.value;
+    pair->pair.value = *val;
+    *val = tmp;
+    if (pair->pair.value) {
+        pair->pair.value->parent = pair;
+    }
+    if (*val) {
+        (*val)->parent = NULL;
+    }
+    return 0;
+}
+
+int cbor_pair_swap_key(cbor_value_t *pair, cbor_value_t **key) {
+    assert(key != NULL && (*key == NULL || (*key != NULL && (*key)->parent == NULL)));
+    assert(pair != NULL && pair->type == CBOR__TYPE_PAIR);
+    cbor_value_t *tmp = pair->pair.key;
+    pair->pair.key = *key;
+    *key = tmp;
+    if (pair->pair.key) {
+        pair->pair.key->parent = pair;
+    }
+    if (*key) {
+        (*key)->parent = NULL;
+    }
+    return 0;
+}
+
 bool cbor_value_test(const cbor_value_t *va, const cbor_value_t *vb) {
     if (va == NULL || vb == NULL) {
         return false;
@@ -130,8 +160,9 @@ cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *path) {
         if (remval->parent->type == CBOR__TYPE_PAIR) {
             cbor_value_t *pair = remval->parent;
             if (pair->parent && pair->parent->type == CBOR_TYPE_MAP) {
+                cbor_value_t *val = NULL;
                 cbor_container_remove(pair->parent, pair);
-                cbor_pair_unset_value(pair);
+                cbor_pair_swap_value(pair, &val);
                 cbor_destroy(pair);
                 return remval;
             }
@@ -177,7 +208,8 @@ cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_v
                 }
                 if (find) {
                     if (last) {
-                        cbor_pair_reset_value(find, value);
+                        cbor_pair_swap_value(find, &value);
+                        cbor_destroy(value);
                     } else {
                         current = cbor_pair_value(find);
                     }
@@ -199,6 +231,10 @@ cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_v
                     char *end;
                     int idx = strtol(cbor_string(ele), &end, 10);
                     if (*end == '\0' && idx >= 0) {
+                        if (cbor_container_empty(current) && idx == 0 && last) {
+                            cbor_container_insert_head(current, value);
+                            continue;
+                        }
                         cbor_value_t *val = cbor_container_first(current);
                         for ( ; idx > 0; idx--) {
                             val = cbor_container_next(current, val);
@@ -261,7 +297,8 @@ cbor_value_t *cbor_pointer_replace(cbor_value_t *container, const char *path, cb
                 }
                 if (find) {
                     if (last) {
-                        cbor_pair_reset_value(find, value);
+                        cbor_pair_swap_value(find, &value);
+                        cbor_destroy(value);
                     } else {
                         current = cbor_pair_value(find);
                     }
@@ -424,11 +461,13 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                     if (last) {
                         cbor_container_remove(root, value);
                         if (root->type == CBOR_TYPE_MAP) {
-                            cbor_value_t *tmp = cbor_pair_unset_value(value);
+                            cbor_value_t *tmp = NULL;
+                            cbor_pair_swap_value(value, &tmp);
                             cbor_destroy(value);
                             value = tmp;
                         }
-                        cbor_pair_reset_value(find, value);
+                        cbor_pair_swap_value(find, &value);
+                        cbor_destroy(value);
                     } else {
                         current = cbor_pair_value(find);
                     }
@@ -437,7 +476,9 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                     if (last) {
                         cbor_container_remove(root, value);
                         if (root->type == CBOR_TYPE_MAP) {
-                            cbor_pair_reset_key(value, cbor_duplicate(ele));
+                            cbor_value_t *key = cbor_duplicate(ele);
+                            cbor_pair_swap_key(value, &key);
+                            cbor_destroy(key);
                         } else {
                             cbor_value_t *tmp = cbor_init_pair(cbor_duplicate(ele), value);
                             value = tmp;
@@ -451,7 +492,8 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                     if (last) {
                         cbor_container_remove(root, value);
                         if (cbor_is_map(root)) {
-                            cbor_value_t *tmp = cbor_pair_unset_value(value);
+                            cbor_value_t *tmp = NULL;
+                            cbor_pair_swap_value(value, &tmp);
                             cbor_destroy(value);
                             value = tmp;
                         }
@@ -472,7 +514,8 @@ cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const
                             if (last) {
                                 cbor_container_remove(root, value);
                                 if (root->type == CBOR_TYPE_MAP) {
-                                    cbor_value_t *tmp = cbor_pair_unset_value(value);
+                                    cbor_value_t *tmp = NULL;
+                                    cbor_pair_swap_value(value, &tmp);
                                     cbor_destroy(value);
                                     value = tmp;
                                 }

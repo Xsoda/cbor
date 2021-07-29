@@ -39,10 +39,14 @@ int cbor_destroy(cbor_value_t *val) {
         free(val->blob.ptr);
         val->blob.ptr = NULL;
     } else if (val->type == CBOR__TYPE_PAIR) {
-        cbor_value_t *var;
-        var = cbor_pair_unset_key(val);
+        cbor_value_t *var = val->pair.key;
+        val->pair.key = NULL;
+        var->parent = NULL;
         cbor_destroy(var);
-        var = cbor_pair_unset_value(val);
+
+        var = val->pair.value;
+        val->pair.value = NULL;
+        var->parent = NULL;
         cbor_destroy(var);
     } else if (val->type == CBOR_TYPE_TAG) {
         cbor_value_t *var = cbor_tag_unset_content(val);

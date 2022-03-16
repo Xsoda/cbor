@@ -1396,6 +1396,27 @@ cbor_value_t *cbor_pair_value(const cbor_value_t *val) {
     return NULL;
 }
 
+cbor_value_t *cbor_pair_set_key(cbor_value_t *pair, cbor_value_t *key) {
+    assert(key->parent == NULL);
+    assert(key->type == CBOR_TYPE_STRING || key->type == CBOR_TYPE_BYTESTRING);
+    assert(pair->type == CBOR__TYPE_PAIR);
+    cbor_value_t *tmp = pair->pair.key;
+    pair->pair.key = key;
+    key->parent = pair;
+    tmp->parent = NULL;
+    return tmp;
+}
+
+cbor_value_t *cbor_pair_set_value(cbor_value_t *pair, cbor_value_t *val) {
+    assert(val->parent == NULL);
+    assert(pair->type == CBOR__TYPE_PAIR);
+    cbor_value_t *tmp = pair->pair.value;
+    pair->pair.value = val;
+    val->parent = pair;
+    tmp->parent = NULL;
+    return tmp;
+}
+
 const char *cbor_type_str(const cbor_value_t *val) {
     if (val == NULL) {
         return "";

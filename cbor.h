@@ -67,12 +67,10 @@ bool cbor_is_tag(const cbor_value_t *val);
 bool cbor_is_null(const cbor_value_t *val);
 bool cbor_is_number(const cbor_value_t *val);
 
-cbor_value_t *cbor_pair_key(const cbor_value_t *val);
-cbor_value_t *cbor_pair_value(const cbor_value_t *val);
-cbor_value_t *cbor_pair_unset_key(cbor_value_t *val);
-cbor_value_t *cbor_pair_unset_value(cbor_value_t *val);
-void cbor_pair_reset_key(cbor_value_t *val, cbor_value_t *key);
-void cbor_pair_reset_value(cbor_value_t *val, cbor_value_t *value);
+cbor_value_t *cbor_pair_key(const cbor_value_t *pair);
+cbor_value_t *cbor_pair_value(const cbor_value_t *pair);
+cbor_value_t *cbor_pair_set_key(cbor_value_t *pair, cbor_value_t *key);
+cbor_value_t *cbor_pair_set_value(cbor_value_t *pair, cbor_value_t *val);
 
 cbor_value_t *cbor_init_boolean(bool b);
 cbor_value_t *cbor_init_null();

@@ -49,8 +49,10 @@ int cbor_destroy(cbor_value_t *val) {
         var->parent = NULL;
         cbor_destroy(var);
     } else if (val->type == CBOR_TYPE_TAG) {
-        cbor_value_t *var = cbor_tag_unset_content(val);
-        cbor_destroy(var);
+        val->tag.content->parent = NULL;
+        cbor_destroy(val->tag.content);
+        val->tag.item = 0;
+        val->tag.content = NULL;
     }
     free(val);
     return 0;
@@ -1151,39 +1153,34 @@ bool cbor_boolean(const cbor_value_t *val) {
     return false;
 }
 
-cbor_value_t *cbor_tag_unset_content(cbor_value_t *val) {
+cbor_value_t *cbor_tag_set_content(cbor_value_t *val, cbor_value_t *content) {
     assert(val != NULL && val->type == CBOR_TYPE_TAG);
+    assert(content->parent == NULL);
     cbor_value_t *tmp = val->tag.content;
     if (tmp) {
         tmp->parent = NULL;
     }
-    val->tag.content = NULL;
+    val->tag.content = content;
+    content->parent = val;
     return tmp;
 }
 
-void cbor_tag_reset_content(cbor_value_t *val, cbor_value_t *content) {
-    assert(content == NULL || (content != NULL && val->parent == NULL));
-    cbor_value_t *tmp = cbor_tag_unset_content(val);
-    val->tag.content = content;
-    if (content) {
-        content->parent = val;
-    }
-    cbor_destroy(tmp);
-}
 
-void cbor_tag_reset_item(cbor_value_t *val, long item) {
+long cbor_tag_set_item(cbor_value_t *val, long item) {
     assert(val != NULL && val->type == CBOR_TYPE_TAG);
+    long tmp = val->tag.item;
     val->tag.item = item;
+    return tmp;
 }
 
-long cbor_tag_get_item(cbor_value_t *val) {
+long cbor_tag_get_item(const cbor_value_t *val) {
     if (val && val->type == CBOR_TYPE_TAG) {
         return val->tag.item;
     }
     return 0;
 }
 
-cbor_value_t *cbor_tag_get_content(cbor_value_t *val) {
+cbor_value_t *cbor_tag_get_content(const cbor_value_t *val) {
     if (val && val->type == CBOR_TYPE_TAG) {
         return val->tag.content;
     }

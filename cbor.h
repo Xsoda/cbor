@@ -122,11 +122,10 @@ cbor_value_t *cbor_iter_next(cbor_iter_t *iter);
 
 cbor_value_t *cbor_get_parent(cbor_value_t *val);
 
-void cbor_tag_reset_item(cbor_value_t *val, long item);
-cbor_value_t *cbor_tag_unset_content(cbor_value_t *val);
-void cbor_tag_reset_content(cbor_value_t *val, cbor_value_t *content);
-long cbor_tag_get_item(cbor_value_t *val);
-cbor_value_t *cbor_tag_get_content(cbor_value_t *val);
+long cbor_tag_set_item(cbor_value_t *val, long item);
+cbor_value_t *cbor_tag_set_content(cbor_value_t *val, cbor_value_t *content);
+long cbor_tag_get_item(const cbor_value_t *val);
+cbor_value_t *cbor_tag_get_content(const cbor_value_t *val);
 
 /* CBOR ref: https://tools.ietf.org/html/rfc7049 */
 cbor_value_t *cbor_loads(const char *src, size_t *length);

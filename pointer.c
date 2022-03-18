@@ -26,6 +26,11 @@ cbor_value_t *cbor_pointer_get(const cbor_value_t *container, const char *path) 
     cbor_value_t *next = NULL;
     cbor_value_t *split = cbor_string_split(path, "/");
 
+    if (path[0] == 0) {
+        cbor_destroy(split);
+        return (cbor_value_t *)container;
+    }
+
     cbor_iter_init(&iter, split, CBOR_ITER_AFTER);
     while ((ele = cbor_iter_next(&iter)) != NULL) {
         cbor_string_replace(ele, "~1", "/");

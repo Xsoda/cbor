@@ -138,46 +138,45 @@ static void lexer_skip_whitespace(lexer_t *lexer) {
 }
 
 void json_lexer_error(lexer_t *lexer) {
-    char buffer[4096];
-    size_t length = 0;
+    int i;
     int offset = 0;
-    length = snprintf(buffer, sizeof(buffer), "json lexer error at line %d, offset %d\n", lexer->linum, lexer->linoff);
-    offset = snprintf(buffer + length, sizeof(buffer) - length, "%04d | ", lexer->linum);
-    length += offset;
+    cbor_value_t *output = cbor_init_string(NULL, 0);
+    cbor_blob_append_v(output, "json lexer error at line %d, offset %d\n", lexer->linum, lexer->linoff);
+    cbor_blob_append_v(output, "%04d | ", lexer->linum);
+    offset = 7;
     if (lexer->linoff > 50) {
-        int i;
-        length += snprintf(buffer + length, sizeof(buffer) - length, " ... ");
+        cbor_blob_append_v(output, " ... ");
         offset += 5;
         for (i = lexer->linoff - 20;
              lexer->linst[i] != '\r' && lexer->linst[i] != '\n' && i < lexer->linoff + 20;
              i++) {
-            length += snprintf(buffer + length, sizeof(buffer) - length, "%c", (unsigned char)lexer->linst[i]);
+            cbor_blob_append_byte(output, (unsigned char)lexer->linst[i]);
         }
         if (lexer->linst[i] != '\r' && lexer->linst[i] != '\n') {
-            length += snprintf(buffer + length, sizeof(buffer) - length, " ...\n");
+            cbor_blob_append_v(output, " ...\n");
         } else {
-            length += snprintf(buffer + length, sizeof(buffer) - length, "\n");
+            cbor_blob_append_byte(output, '\n');
         }
         offset += 20;
     } else {
-        int i;
-        offset += lexer->linoff;
         for (i = 0;
              lexer->linst[i] != '\r' && lexer->linst[i] != '\n' && i < 70;
              i++) {
-            length += snprintf(buffer + length, sizeof(buffer) - length, "%c", (unsigned char)lexer->linst[i]);
+            cbor_blob_append_byte(output, (unsigned char)lexer->linst[i]);
         }
         if (lexer->linst[i] != '\r' && lexer->linst[i] != '\n') {
-            length += snprintf(buffer + length, sizeof(buffer) - length, " ...\n");
+            cbor_blob_append_v(output, " ...\n");
         } else {
-            length += snprintf(buffer + length, sizeof(buffer) - length, "\n");
+            cbor_blob_append_byte(output, '\n');
         }
+        offset += lexer->linoff;
     }
     offset++;
-    length += snprintf(buffer + length, sizeof(buffer) - length, "%*s\n", offset, "^");
-    length += snprintf(buffer + length, sizeof(buffer) - length, "%*s\n", offset, "|");
-    length += snprintf(buffer + length, sizeof(buffer) - length, "%*s\n", offset, json_err_str[lexer->last_error]);
-    fprintf(stdout, "%s", buffer);
+    cbor_blob_append_v(output, "%*s\n", offset, "^");
+    cbor_blob_append_v(output, "%*s\n", offset, "|");
+    cbor_blob_append_v(output, "%*s\n", offset, json_err_str[lexer->last_error]);
+    fprintf(stdout, "%s", cbor_string(output));
+    cbor_destroy(output);
 }
 
 cbor_value_t *json_parse_object(lexer_t *lexer) {
@@ -748,9 +747,9 @@ void json__dumps(const cbor_value_t *src, int indent, const char *space, int len
     } else if (cbor_is_string(src)) {
         cbor_blob_append_byte(dst, '"');
         const char *ptr = cbor_string(src);
-        int length = cbor_string_size(src);
+        int size = cbor_string_size(src);
 
-        for (i = 0; i < length; i++) {
+        for (i = 0; i < size; i++) {
             switch ((unsigned char)ptr[i]) {
             case '\n':
                 cbor_blob_append_byte(dst, '\\');

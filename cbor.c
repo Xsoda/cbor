@@ -145,25 +145,6 @@ int cbor_blob_append_qword(cbor_value_t *val, uint64_t qword) {
     return -1;
 }
 
-void cbor_blob_trim(cbor_value_t *val) {
-    size_t t;
-    if (val == NULL || val->type != CBOR_TYPE_STRING) {
-        return;
-    }
-    for (t = 0; t < val->blob.length; t++) {
-        if (!isspace((unsigned char)val->blob.ptr[t])) {
-            break;
-        }
-    }
-    if (t > 0) {
-        memmove(val->blob.ptr, val->blob.ptr + t, val->blob.length - t);
-        val->blob.length -= t;
-    }
-    while (val->blob.length > 0 && isspace((unsigned char)val->blob.ptr[val->blob.length - 1]))
-        val->blob.length -= 1;
-    val->blob.ptr[val->blob.length] = 0;
-}
-
 int cbor_container_empty(const cbor_value_t *container) {
     if (container && (container->type == CBOR_TYPE_ARRAY || container->type == CBOR_TYPE_MAP)) {
         return list_empty(&container->container);
@@ -1080,9 +1061,9 @@ char *cbor_dumps(const cbor_value_t *src, size_t *length) {
     }
     dst = cbor_create(CBOR_TYPE_BYTESTRING);
     cbor__dumps(src, dst);
-    *length = dst->blob.length;
-    ptr = dst->blob.ptr;
-    free(dst);
+    *length = cbor_string_size(dst);
+    ptr = cbor_string_release(dst);
+    cbor_destroy(dst);
     return ptr;
 }
 
@@ -1137,6 +1118,18 @@ const char *cbor_string(const cbor_value_t *val) {
         return val->blob.ptr;
     }
     return 0;
+}
+
+char *cbor_string_release(cbor_value_t *val) {
+    char *ptr;
+    if (!cbor_is_string(val) || !cbor_is_bytestring(val)) {
+        return NULL;
+    }
+    ptr = val->blob.ptr;
+    val->blob.ptr = NULL;
+    val->blob.length = 0;
+    val->blob.allocated = 0;
+    return ptr;
 }
 
 bool cbor_boolean(const cbor_value_t *val) {
@@ -1755,4 +1748,23 @@ int cbor_string_slice(cbor_value_t *str, int start, int stop) {
     }
     str->blob.ptr[str->blob.length] = 0;
     return 0;
+}
+
+void cbor_string_trim(cbor_value_t *val) {
+    size_t t;
+    if (val == NULL || val->type != CBOR_TYPE_STRING) {
+        return;
+    }
+    for (t = 0; t < val->blob.length; t++) {
+        if (!isspace((unsigned char)val->blob.ptr[t])) {
+            break;
+        }
+    }
+    if (t > 0) {
+        memmove(val->blob.ptr, val->blob.ptr + t, val->blob.length - t);
+        val->blob.length -= t;
+    }
+    while (val->blob.length > 0 && isspace((unsigned char)val->blob.ptr[val->blob.length - 1]))
+        val->blob.length -= 1;
+    val->blob.ptr[val->blob.length] = 0;
 }

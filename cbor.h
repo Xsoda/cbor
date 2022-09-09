@@ -39,7 +39,7 @@ int cbor_blob_append_byte(cbor_value_t *val, uint8_t byte);
 int cbor_blob_append_word(cbor_value_t *val, uint16_t word);
 int cbor_blob_append_dword(cbor_value_t *val, uint32_t dword);
 int cbor_blob_append_qword(cbor_value_t *val, uint64_t qword);
-void cbor_blob_trim(cbor_value_t *val);
+
 
 int cbor_container_empty(const cbor_value_t *container);
 int cbor_container_size(const cbor_value_t *container);
@@ -145,6 +145,8 @@ cbor_value_t *cbor_string_split_linebreak(const char *str);
 cbor_value_t *cbor_string_split_whitespace(const char *str);
 cbor_value_t *cbor_string_split_character(const char *str, int length, const char *characters, int size);
 cbor_value_t *cbor_string_join(cbor_value_t *array, const char *join);
+void cbor_string_trim(cbor_value_t *val);
+char *cbor_string_release(cbor_value_t *val);
 int cbor_string_replace(cbor_value_t *str, const char *find, const char *replace);
 bool cbor_string_startswith(const char *str, int length, const char *first);
 bool cbor_string_endswith(const char *str, int length, const char *last);

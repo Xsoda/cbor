@@ -966,10 +966,8 @@ char *cbor_json_dumps(const cbor_value_t *src, size_t *length, bool pretty) {
         } else {
             json__dumps(src, 0, NULL, 0, dst);
         }
-        ptr = dst->blob.ptr;
-        *length = dst->blob.length;
-        dst->blob.ptr = NULL;
-        dst->blob.length = 0;
+        *length = cbor_string_size(dst);
+        ptr = cbor_string_release(dst);
         cbor_destroy(dst);
     }
     return ptr;

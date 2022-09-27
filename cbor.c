@@ -38,6 +38,8 @@ int cbor_destroy(cbor_value_t *val) {
     } else if (val->type == CBOR_TYPE_BYTESTRING || val->type == CBOR_TYPE_STRING) {
         free(val->blob.ptr);
         val->blob.ptr = NULL;
+        val->blob.length = 0;
+        val->blob.allocated = 0;
     } else if (val->type == CBOR__TYPE_PAIR) {
         cbor_value_t *var = val->pair.key;
         val->pair.key = NULL;
@@ -55,6 +57,82 @@ int cbor_destroy(cbor_value_t *val) {
         val->tag.content = NULL;
     }
     free(val);
+    return 0;
+}
+
+int cbor_copy(cbor_value_t *dst, const cbor_value_t *src) {
+    if (dst->type == CBOR_TYPE_ARRAY || dst->type == CBOR_TYPE_MAP) {
+        cbor_value_t *var, *tvar;
+        list_foreach_safe(var, &dst->container, entry, tvar) {
+            cbor_container_remove(dst, var);
+            cbor_destroy(var);
+        }
+    } else if (dst->type == CBOR_TYPE_BYTESTRING || dst->type == CBOR_TYPE_STRING) {
+        free(dst->blob.ptr);
+        dst->blob.ptr = NULL;
+        dst->blob.length = 0;
+        dst->blob.allocated = 0;
+    } else if (dst->type == CBOR__TYPE_PAIR) {
+        cbor_value_t *var = dst->pair.key;
+        dst->pair.key = NULL;
+        var->parent = NULL;
+        cbor_destroy(var);
+
+        var = dst->pair.value;
+        dst->pair.value = NULL;
+        var->parent = NULL;
+        cbor_destroy(var);
+    } else if (dst->type == CBOR_TYPE_TAG) {
+        dst->tag.content->parent = NULL;
+        cbor_destroy(dst->tag.content);
+        dst->tag.item = 0;
+        dst->tag.content = NULL;
+    }
+    dst->type = src->type;
+    if (dst->type == CBOR_TYPE_ARRAY || dst->type == CBOR_TYPE_MAP) {
+        list_init(&dst->container);
+    } else if (dst->type == CBOR_TYPE_STRING || dst->type == CBOR_TYPE_BYTESTRING) {
+        dst->blob.ptr = (char *)malloc(32);
+        dst->blob.allocated = 32;
+        dst->blob.length = 0;
+    }
+    switch (src->type) {
+    case CBOR_TYPE_UINT:
+    case CBOR_TYPE_NEGINT: {
+        dst->uint = src->uint;
+        break;
+    }
+    case CBOR_TYPE_BYTESTRING:
+    case CBOR_TYPE_STRING: {
+        cbor_blob_append(dst, cbor_string(src), cbor_string_size(src));
+        break;
+    }
+    case CBOR_TYPE_ARRAY:
+    case CBOR_TYPE_MAP: {
+        cbor_value_t *elm;
+        for (elm = cbor_container_first(src);
+             elm != NULL;
+             elm = cbor_container_next(src, elm)) {
+            cbor_container_insert_tail(dst, cbor_duplicate(elm));
+        }
+        break;
+    }
+    case CBOR_TYPE_TAG: {
+        dst->tag.item = src->tag.item;
+        cbor_tag_set_content(dst, cbor_duplicate(src->tag.content));
+        break;
+    }
+    case CBOR_TYPE_SIMPLE: {
+        dst->simple.ctrl = src->simple.ctrl;
+        dst->simple.real = src->simple.real;
+        break;
+    }
+    case CBOR__TYPE_PAIR: {
+        cbor_pair_set_key(dst, cbor_duplicate(src->pair.key));
+        cbor_pair_set_value(dst, cbor_duplicate(src->pair.value));
+        break;
+    }
+    }
     return 0;
 }
 
@@ -1341,8 +1419,8 @@ cbor_value_t *cbor_duplicate(const cbor_value_t *val) {
     }
     case CBOR_TYPE_TAG: {
         dup = cbor_create(val->type);
-        dup->tag.item = val->tag.item;
-        dup->tag.content = cbor_duplicate(val->tag.content);
+        cbor_tag_set_item(dup, val->tag.item);
+        cbor_tag_set_content(dup, cbor_duplicate(val->tag.content));
         break;
     }
     case CBOR_TYPE_SIMPLE: {

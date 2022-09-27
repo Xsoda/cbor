@@ -329,32 +329,58 @@ cbor_value_t *cbor_pointer_set(cbor_value_t *container, const char *path, cbor_v
     return current;
 }
 
-int cbor_patch(cbor_value_t *dst, const cbor_value_t *src) {
+/*
+ * define MergePatch(Target, Patch):
+ *    if Patch is an Object:
+ *       if Target is not an Object:
+ *          Target = {} # Ignore the contents and set it to an empty Object
+ *       for each Name/Value pair in Patch:
+ *          if Value is null:
+ *             if Name exists in Target:
+ *                remove the Name/Value pair from Target
+ *          else:
+ *             Target[Name] = MergePatch(Target[Name], Value)
+ *       return Target
+ *    else:
+ *       return Patch
+ */
+cbor_value_t *cbor_merge_patch(cbor_value_t *target, const cbor_value_t *patch) {
     cbor_iter_t iter;
     cbor_value_t *ele;
-    if (!cbor_is_map(dst) || !cbor_is_map(src)) {
-        return -1;
-    }
-    cbor_iter_init(&iter, src, CBOR_ITER_AFTER);
-    while ((ele = cbor_iter_next(&iter)) != NULL) {
-        cbor_value_t *key = cbor_pair_key(ele);
-        cbor_value_t *val = cbor_pair_value(ele);
-        cbor_value_t *find = cbor_map_find(dst, cbor_string(key));
-        if (find == NULL) {
-            cbor_container_insert_tail(dst, cbor_duplicate(ele));
-        } else {
-            cbor_value_t *value = cbor_pair_value(find);
-            if (cbor_is_map(value) && cbor_is_map(val)) {
-                cbor_patch(value, val);
-            } else if (cbor_is_null(val)) {
-                cbor_container_remove(dst, find);
-                cbor_destroy(find);
+    if (cbor_is_map(patch)) {
+        if (!cbor_is_map(target)) {
+            cbor_value_t *tmp = cbor_init_map();
+            cbor_copy(target, tmp);
+            cbor_destroy(tmp);
+        }
+        cbor_iter_init(&iter, patch, CBOR_ITER_AFTER);
+        while ((ele = cbor_iter_next(&iter)) != NULL) {
+            cbor_value_t *key = cbor_pair_key(ele);
+            cbor_value_t *value = cbor_pair_value(ele);
+            cbor_value_t *find = cbor_map_find(target, cbor_string(key));
+            if (cbor_is_null(value)) {
+                if (find != NULL) {
+                    cbor_container_remove(target, find);
+                    cbor_destroy(find);
+                }
             } else {
-                cbor_value_t *tmp = cbor_pair_set_value(find, cbor_duplicate(val));
-                cbor_destroy(tmp);
+                if (find != NULL) {
+                    cbor_merge_patch(cbor_pair_value(find), value);
+                } else {
+                    cbor_value_t *var = cbor_merge_patch(cbor_init_null(), value);
+                    cbor_value_t *pair = cbor_init_pair(cbor_duplicate(key), var);
+                    cbor_container_insert_tail(target, pair);
+                }
             }
         }
+    } else {
+        cbor_copy(target, patch);
     }
+    return target;
+}
+
+int cbor_patch(cbor_value_t *dst, const cbor_value_t *src) {
+    cbor_merge_patch(dst, src);
     return 0;
 }
 

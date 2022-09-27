@@ -139,6 +139,8 @@ char *cbor_json_dumps(const cbor_value_t *src, size_t *length, bool pretty);
 cbor_value_t *cbor_json_loadf(const char *path);
 int cbor_json_dumpf(cbor_value_t *val, const char *path, bool pretty);
 
+int cbor_copy(cbor_value_t *dst, const cbor_value_t *src);
+
 cbor_value_t *cbor_string_split(const char *str, const char *f);
 cbor_value_t *cbor_string_splitn(const char *str, int l, const char *f);
 cbor_value_t *cbor_string_split_linebreak(const char *str);

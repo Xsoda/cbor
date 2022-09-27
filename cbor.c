@@ -1122,7 +1122,7 @@ const char *cbor_string(const cbor_value_t *val) {
 
 char *cbor_string_release(cbor_value_t *val) {
     char *ptr;
-    if (!cbor_is_string(val) || !cbor_is_bytestring(val)) {
+    if (!cbor_is_string(val) && !cbor_is_bytestring(val)) {
         return NULL;
     }
     ptr = val->blob.ptr;

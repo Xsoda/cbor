@@ -93,12 +93,12 @@ int cbor_container_concat(cbor_value_t *dst, cbor_value_t *src);
 
 /* JSON Pointer ref: https://tools.ietf.org/html/rfc6901 */
 cbor_value_t *cbor_pointer_get(const cbor_value_t *container, const char *path);
-cbor_value_t *cbor_pointer_add(cbor_value_t *container, const char *path, cbor_value_t *value);
+cbor_value_t *cbor_pointer_insert(cbor_value_t *container, const char *path, cbor_value_t *value);
 cbor_value_t *cbor_pointer_remove(cbor_value_t *container, const char *path);
-cbor_value_t *cbor_pointer_move(cbor_value_t *container, const char *from, const char *path);
+cbor_value_t *cbor_pointer_set(cbor_value_t *container, const char *from, cbor_value_t *value);
 cbor_value_t *cbor_pointer_replace(cbor_value_t *container, const char *path, cbor_value_t *value);
-cbor_value_t *cbor_pointer_copy(cbor_value_t *container, const char *from, const char *path);
-bool cbor_pointer_test(cbor_value_t *container, const char *path, const cbor_value_t *value);
+/* JSON Merge Patch ref: https://www.rfc-editor.org/rfc/rfc7396 */
+int cbor_patch(cbor_value_t *dst, const cbor_value_t *src);
 int cbor_pointer_join(char *buf, size_t size, ...);
 
 int cbor_pointer_seta(cbor_value_t *container, const char *path);

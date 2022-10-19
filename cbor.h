@@ -155,8 +155,12 @@ bool cbor_string_endswith(const char *str, int length, const char *last);
 int cbor_string_strip(cbor_value_t *str);
 int cbor_string_rstrip(cbor_value_t *str);
 int cbor_string_lstrip(cbor_value_t *str);
-int cbor_string_find(const char *str, int len, const char *find, int count);
-int cbor_string_rfind(const char *str, int len, const char *find, int count);
+int string_find(const char *str, int len, const char *find, int count);
+int string_rfind(const char *str, int len, const char *find, int count);
+char **string_split(const char *str, const char *f);
+char *string_join(const char **result, const char *join);
+void string_free_split_result(char **result);
+void string_free_join_result(char *result);
 
 /* string slice:
  *   include `start` and `stop` character, start must greate equal 0, e.g.:

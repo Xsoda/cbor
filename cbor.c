@@ -1792,7 +1792,7 @@ cbor_value_t *cbor_get_parent(cbor_value_t *val) {
     return NULL;
 }
 
-int cbor_string_find(const char *str, int len, const char *find, int count) {
+int string_find(const char *str, int len, const char *find, int count) {
     int m, off;
     if (len <= 0) {
         len = strlen(str);
@@ -1802,7 +1802,7 @@ int cbor_string_find(const char *str, int len, const char *find, int count) {
     return off;
 }
 
-int cbor_string_rfind(const char *str, int len, const char *find, int count) {
+int string_rfind(const char *str, int len, const char *find, int count) {
     int m, off;
     if (len <= 0) {
         len = strlen(str);
@@ -1810,6 +1810,74 @@ int cbor_string_rfind(const char *str, int len, const char *find, int count) {
     m = strlen(find);
     off = FASTSEARCH(str, len, find, m, count, FAST_RSEARCH);
     return off;
+}
+
+char **string_split(const char *str, const char *f) {
+    char **result;
+    int l, m, size, offset;
+    int len, alloc;
+    if (!str || !f) {
+        return NULL;
+    }
+    l = strlen(str);
+    m = strlen(f);
+    offset = 0;
+    len = 0;
+    alloc = 4;
+    result = (char **)malloc(sizeof(char *) * alloc);
+    do {
+        size = FASTSEARCH(str + offset, l - offset, f, m, -1, FAST_SEARCH);
+        if (size >= 0) {
+            char *tmp = strndup(str + offset, size);
+            offset += size;
+            offset += m;
+            if (len + 1 >= alloc) {
+                alloc += 4;
+                result = (char **)realloc(result, sizeof(char *) * alloc);
+            }
+            result[len++] = tmp;
+        }
+    } while (size >= 0);
+    if (offset <= l) {
+        if (len + 2 >= alloc) {
+            alloc += 4;
+            result = (char **)realloc(result, sizeof(char *) * alloc);
+        }
+        result[len++] = strndup(str + offset, l - offset);
+    }
+    result[len] = NULL;
+    return result;
+}
+
+void string_free_split_result(char **result) {
+    if (result == NULL) {
+        return;
+    }
+    for (int i = 0; result[i] != NULL; i++) {
+        free(result[i]);
+        result[i] = NULL;
+    }
+    free(result);
+}
+
+char *string_join(const char **splitres, const char *join) {
+    char *s;
+    size_t l = strlen(join);
+    cbor_value_t *result = cbor_init_string("", 0);
+    for (int i = 0; splitres[i] != NULL; i++) {
+        size_t len = strlen(splitres[i]);
+        cbor_blob_append(result, splitres[i], len);
+        if (splitres[i + 1] != NULL) {
+            cbor_blob_append(result, join, l);
+        }
+    }
+    s = cbor_string_release(result);
+    cbor_destroy(result);
+    return s;
+}
+
+void string_free_join_result(char *result) {
+    free(result);
 }
 
 int cbor_string_slice(cbor_value_t *str, int start, int stop) {

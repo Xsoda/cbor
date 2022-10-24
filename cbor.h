@@ -158,7 +158,9 @@ int cbor_string_lstrip(cbor_value_t *str);
 int string_find(const char *str, int len, const char *find, int count);
 int string_rfind(const char *str, int len, const char *find, int count);
 char **string_split(const char *str, const char *f);
-char *string_join(const char **result, const char *join);
+char *string_join(const char *join, const char **result);
+char *string__join_v(const char *join, ...);
+#define string_join_v(join, ...) string__join_v(join, ## __VA_ARGS, NULL)
 void string_free_split_result(char **result);
 void string_free_join_result(char *result);
 

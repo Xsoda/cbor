@@ -1860,7 +1860,7 @@ void string_free_split_result(char **result) {
     free(result);
 }
 
-char *string_join(const char **splitres, const char *join) {
+char *string_join(const char *join, const char **splitres) {
     char *s;
     size_t l = strlen(join);
     cbor_value_t *result = cbor_init_string("", 0);
@@ -1874,6 +1874,31 @@ char *string_join(const char **splitres, const char *join) {
     s = cbor_string_release(result);
     cbor_destroy(result);
     return s;
+}
+
+char *string__join_v(const char *join, ...) {
+    int len, count;
+    va_list ap, cpy;
+    const char *args, **argument;
+    char *result;
+    va_start(ap, join);
+    va_copy(cpy, ap);
+    count = 0;
+    args = va_arg(cpy, const char *);
+    while (args != NULL) {
+        len += 1;
+        args = va_arg(cpy, const char *);
+    }
+    argument = (const char **)malloc(sizeof(char *) * (len + 1));
+    args = va_arg(ap, const char *);
+    while (args != NULL) {
+        argument[count++] = args;
+        args = va_arg(ap, const char *);
+    }
+    argument[count] = NULL;
+    result = string_join(join, argument);
+    free(argument);
+    return result;
 }
 
 void string_free_join_result(char *result) {
